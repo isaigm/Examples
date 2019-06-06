@@ -1,9 +1,8 @@
-package det.a;
 import java.math.*;
 import java.util.Scanner;
 public class DetA {
     public static void main(String[] args) {
-        int ord = 2;
+        int ord = 4;
         int matriz [][] = new int[ord][ord];
         Scanner read = new Scanner(System.in);
         for(int i = 0; i < ord; i++){
@@ -12,7 +11,6 @@ public class DetA {
             }
         }
        System.out.println(det(matriz, ord));
-       impr(matriz, ord);
     }
     static void impr(int matriz[][], int ord){
          for(int i = 0; i < ord; i++){
@@ -22,12 +20,12 @@ public class DetA {
             System.out.println();
         }
     }
-    static int [][] inicioSub(int matriz[][], , int col, int orden){
+    static int [][] inicioSub(int matriz[][], int col, int orden){
         int resultado[][]  = new int[orden - 1][orden - 1];
         int k = 0, l = 0;
         for(int i = 0; i < orden; i++){
-            for(int j = col; j < orden; j++){
-                if(i != fila && j != col){
+            for(int j = 0; j < orden; j++){
+                if(i != 0 && j != col){
                     resultado[k][l] = matriz[i][j];
                     l++;
                     if(l >= orden - 1){
@@ -42,14 +40,11 @@ public class DetA {
     static int det(int matriz[][], int orden){
         int det = 0;
         if(orden == 1) return matriz[0][0];
-
         for(int i = 0; i < orden; i++){
-            int aux[][] = inicioSub(matriz, 0, i, orden);
-            //impr(aux, orden - 1);
+            int aux[][] = inicioSub(matriz, i, orden);
             det =  det +  (int) Math.pow(-1, i) * matriz[0][i] * det(aux, orden - 1);
-        }
-            
-        
+        } 
         return det;
     }
 }
+
