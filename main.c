@@ -1,101 +1,188 @@
 #include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#define MAX 100
-int comp(char const *);
-int balanceados(const char *);
-int main(){
-    char cad[MAX], aux[MAX];
-    int i, j;
-    scanf("%[^\n]", cad);
-    if(balanceados(cad)){
-        for(i = 0, j = 0; i < (int) strlen(cad); i++){
-            if(cad[i] != ' '){
-                aux[j] = cad[i];
-                j++;
-            }
-        }
-        aux[j] = '\0';
-        if(aux[0] == 'i' && aux[1] == 'f'){
-            int flag = 1;
-            for(int i = 0; i < (int) strlen(aux); i++){
-                if(aux[i] == '(' && aux[i-1] == ')'){
-                    flag = 0;
-                    break;
-                }
-            }
-            if(flag && comp(aux)){
-               printf("It's ok\n");
-            }else printf("Invalid sentence\n");
-        }else printf("Invalid sentence\n");
-    }
-    if(3 > 0 && ( 6 > (5 < 0))){
-        printf("Hey\n");
-    }
-
-    return 0;
-}
-int balanceados(const char *cad){
-    int flag = 1, var = 0;
-    for(int i = 0; i < (int)strlen(cad) && flag; i++){
-        if(cad[i] == '(') var++;
-        else if(cad[i] == ')'){
-            if(!(var == 0)) var--;
-            else flag = 0;
-        }
-    }
-    if(var == 0 && flag) return 1;
-    else return 0;
-
-}
-int comp(const char *cad){
-    int flag = 1;
-    for(size_t i = 0; i < strlen(cad) && flag; i++){
-        switch (cad[i]) {
-        case '&':
-            if(cad[i-1] == '&' && (isalpha(cad[i-2]) != 0 || isdigit(cad[i-2]) != 0 || cad[i-2] == ')')){
-                if(i+1 < strlen(cad)){
-                    if(isalpha(cad[i+1]) != 0 || cad[i+1] == '('){}
-                    else flag = 0;
-                }else flag = 0;
-            }else flag = 0;
+#include <stdlib.h>
+#define MAX 255
+typedef struct Usuario{
+    int ID;
+    char nombre[MAX];
+    char telefono[MAX];
+}Usuario;
+typedef struct Automovil{
+    char modelo[MAX];
+    char marca[MAX];
+    char placa[MAX];
+    int tiempo;
+    int ID_usuario;
+}Automovil;
+typedef struct NodoP{
+    struct NodoP *sgte;
+    Automovil dato;
+}NodoP;
+typedef struct Pila{
+    NodoP *ultimo;
+    int tam;
+}Pila;
+typedef struct NodoC{
+    struct NodoC *sgte;
+    Pila *autos;
+}NodoC;
+typedef struct Cola{
+    NodoC *inicio;
+}Cola;
+typedef struct NodoL{
+    struct NodoL *sgte;
+    Cola *lotes;
+}NodoL;
+typedef struct Lista{
+    NodoL *inicio;
+}Lista;
+void limpiarSTDIN(void);
+Pila * crearPila(void);
+void agregarAPila(Pila *, Automovil);
+Automovil capturarAuto(void);
+int verificarIDUsuario(int, FILE *);
+void capturarUsuario(FILE *);
+void mostrarUsuario(int, FILE *);
+void agregarALista(Lista *, Cola *);
+void sacarAuto(Pila *p);
+int main()
+{
+    Pila *p = crearPila();
+    int op;
+    do{
+        printf("Option: ");
+        scanf("%d", &op);
+        limpiarSTDIN();
+        switch(op){
+        case 1:
+            agregarAPila(p, capturarAuto());
             break;
-        case '|':
-            if(cad[i-1] == '|' && (isalpha(cad[i-2]) != 0 || isdigit(cad[i-2]) != 0 || cad[i-2] == ')')){
-                if(i+1 < strlen(cad)){
-                    if(isalpha(cad[i+1]) != 0 || cad[i+1] == '('){}
-                    else flag = 0;
-                }else flag = 0;
-            }else flag = 0;
-            break;
-        case '>':
-            if(isalpha(cad[i-1]) != 0 || isdigit(cad[i-1]) != 0 || cad[i-1] == ')'){
-                if(i+1 < strlen(cad)){
-                    if(isalpha(cad[i+1]) != 0 || cad[i+1] == '(' || isdigit(cad[i+1]) != 0){}
-                    else flag = 0;
-                }else flag = 0;
-            }else flag = 0;
-            break;
-        case '<':
-            if(isalpha(cad[i-1]) != 0 || isdigit(cad[i-1]) != 0 || cad[i-1] == ')'){
-                if(i+1 < strlen(cad)){
-                    if(isalpha(cad[i+1]) != 0 || cad[i+1] == '(' || isdigit(cad[i+1]) != 0){}
-                    else flag = 0;
-                }else flag = 0;
-            }else flag = 0;
-            break;
-        case '=':
-            if(cad[i-1] == '=' && (isalpha(cad[i-2]) != 0 || isdigit(cad[i-2]) != 0 || cad[i-2] == ')')){
-                if(i+1 < strlen(cad)){
-                    if(isalpha(cad[i+1]) != 0 || cad[i+1] == '(' || isdigit(cad[i+1]) != 0){}
-                    else flag = 0;
-                }else flag = 0;
-            }else flag = 0;
+        case 2:
+            sacarAuto(p);
             break;
         default:
             break;
         }
-    }
-    if(flag) return 1;
-    else return 0;
+
+    }while(op != -1);
+    return 0;
 }
+void limpiarSTDIN(void){
+    int c;
+    do{
+        c = getchar();
+    }while(c != '\n' && c != EOF);
+}
+Pila * crearPila(void){
+    Pila *nueva = malloc(sizeof(Pila));
+    nueva->tam = 0;
+    nueva->ultimo = NULL;
+    return nueva;
+}
+void mostrarUsuario(int ID, FILE *fp){
+    fp = fopen("usuarios.dat", "r+b");
+    if(fp != NULL){
+        if(verificarIDUsuario(ID, fp)){
+            Usuario aux;
+            fread(&aux, sizeof(Usuario), 1, fp);
+            while(!feof(fp)){
+                if(aux.ID == ID){
+                    printf("Nombre del usuario -> %s", aux.nombre);
+                    printf("Telefono del usuario -> %s", aux.telefono);
+                    printf("ID del usuario -> %d\n", aux.ID);
+                    break;
+                }
+                fread(&aux, sizeof(Usuario), 1, fp);
+            }
+        }else fprintf(stderr, "\x1b[31mUsuario no encontrado\x1b[0m\n");
+    }else fprintf(stderr, "\x1b[31mError al abrir el archivo\x1b[0m\n");
+}
+void agregarAPila(Pila *p, Automovil a){
+    NodoP *nuevo = malloc(sizeof(NodoP));
+    nuevo->dato = a;
+    nuevo->sgte = NULL;
+    if(p->tam < 3){
+        if(p->ultimo == NULL){
+            p->ultimo = nuevo;
+        }else{
+            nuevo->sgte = p->ultimo;
+            p->ultimo = nuevo;
+        }
+        p->tam++;
+    }else printf("\x1b[31mNo hay cupo en el lote\x1b[0m\n");
+}
+int verificarIDUsuario(int ID, FILE *fp){
+    fp = fopen("usuarios.dat", "r+b");
+    Usuario aux;
+    fread(&aux, sizeof(Usuario), 1, fp);
+    while(!feof(fp)){
+        if(aux.ID == ID) return 1;
+        fread(&aux, sizeof(Usuario), 1, fp);
+    }
+    fclose(fp);
+    return 0;
+}
+void capturarUsuario(FILE *fp){
+    fp = fopen("usuarios.dat", "a+b");
+    Usuario nuevo;
+    printf("Nombre del usuario: ");
+    fgets(nuevo.nombre, MAX, stdin);
+    printf("Telefono del usuario: ");
+    fgets(nuevo.telefono, MAX, stdin);
+    printf("ID del usuario: ");
+    scanf("%d", &nuevo.ID);
+    limpiarSTDIN();
+    while(verificarIDUsuario(nuevo.ID, fp)){
+        fprintf(stderr, "\x1b[31mYa existe un usuario con ese ID, ingrese otro: \x1b[0m\n");
+        scanf("%d", &nuevo.ID);
+        limpiarSTDIN();
+    }
+    fwrite(&nuevo, sizeof(Usuario), 1, fp);
+    fclose(fp);
+}
+void sacarAuto(Pila *p){
+    if(p->tam == 0) printf("\x1b[31mNo hay autos estacionados\x1b[0m\n");
+    else{
+        Automovil aux;
+        FILE *fp;
+        aux = p->ultimo->dato;
+        if(p->tam == 1){
+            free(p->ultimo);
+            p->ultimo = NULL;
+        }else{
+            NodoP *ptr = p->ultimo;
+            p->ultimo = p->ultimo->sgte;
+            free(ptr);
+        }
+        printf("\x1b[34m--Automovil a sacar---\x1b[0m\n");
+        printf("Marca -> %s", aux.marca);
+        printf("Modelo -> %s", aux.modelo);
+        printf("Placa -> %s", aux.placa);
+        printf("Tiempo de guardado -> %d\n", aux.tiempo);
+        printf("\x1b[34m--Informacion sobre el dueño---\x1b[0m\n");
+        mostrarUsuario(aux.ID_usuario, fp);
+        p->tam--;
+    }
+}
+Automovil capturarAuto(void){
+    Automovil nuevo;
+    FILE *fp;
+    printf("Marca del auto: ");
+    fgets(nuevo.marca, MAX, stdin);
+    printf("Modelo del auto: ");
+    fgets(nuevo.modelo, MAX, stdin);
+    printf("Placa del auto: ");
+    fgets(nuevo.placa, MAX, stdin);
+    printf("Tiempo de guardado: ");
+    scanf("%d", &nuevo.tiempo);
+    limpiarSTDIN();
+    printf("ID del usuario: ");
+    scanf("%d", &nuevo.ID_usuario);
+    limpiarSTDIN();
+    while(!verificarIDUsuario(nuevo.ID_usuario, fp)){
+        printf("\x1b[31mNo existe usuario con tal ID, ingrese uno valido: \x1b[0m\n");
+        scanf("%d", &nuevo.ID_usuario);
+        limpiarSTDIN();
+    }
+    return nuevo;
+}
+
