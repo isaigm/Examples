@@ -27,6 +27,8 @@ typedef struct NodoC{
 }NodoC;
 typedef struct Cola{
     NodoC *inicio;
+    NodoC *ultimo;
+    int tam;
 }Cola;
 typedef struct NodoL{
     struct NodoL *sgte;
@@ -34,36 +36,24 @@ typedef struct NodoL{
 }NodoL;
 typedef struct Lista{
     NodoL *inicio;
+    int tam;
 }Lista;
 void limpiarSTDIN(void);
 Pila * crearPila(void);
+Cola * crearCola(void);
+Lista * crearLista(void);
 void agregarAPila(Pila *, Automovil);
 Automovil capturarAuto(void);
+void agregarLote(Cola *, Pila *);
 int verificarIDUsuario(int, FILE *);
 void capturarUsuario(FILE *);
 void mostrarUsuario(int, FILE *);
-void agregarALista(Lista *, Cola *);
+void agregarPiso(Lista *, NodoL *, Cola *);
 void sacarAuto(Pila *p);
 int main()
 {
-    Pila *p = crearPila();
     int op;
-    do{
-        printf("Option: ");
-        scanf("%d", &op);
-        limpiarSTDIN();
-        switch(op){
-        case 1:
-            agregarAPila(p, capturarAuto());
-            break;
-        case 2:
-            sacarAuto(p);
-            break;
-        default:
-            break;
-        }
-
-    }while(op != -1);
+    
     return 0;
 }
 void limpiarSTDIN(void){
@@ -76,6 +66,18 @@ Pila * crearPila(void){
     Pila *nueva = malloc(sizeof(Pila));
     nueva->tam = 0;
     nueva->ultimo = NULL;
+    return nueva;
+}
+Cola * crearCola(void){
+    Cola *nueva = malloc(sizeof(Cola));
+    nueva->tam = 0;
+    nueva->inicio = nueva->ultimo = NULL;
+    return nueva;
+}
+Lista * crearLista(void){
+    Lista *nueva = malloc(sizeof(Lista));
+    nueva->tam = 0;
+    nueva->inicio = NULL;
     return nueva;
 }
 void mostrarUsuario(int ID, FILE *fp){
@@ -153,14 +155,41 @@ void sacarAuto(Pila *p){
             p->ultimo = p->ultimo->sgte;
             free(ptr);
         }
-        printf("\x1b[34m--Automovil a sacar---\x1b[0m\n");
+        printf("\x1b[36m-Automovil a sacar---\x1b[0m\n");
         printf("Marca -> %s", aux.marca);
         printf("Modelo -> %s", aux.modelo);
         printf("Placa -> %s", aux.placa);
         printf("Tiempo de guardado -> %d\n", aux.tiempo);
-        printf("\x1b[34m--Informacion sobre el dueño---\x1b[0m\n");
+        printf("\x1b[36m--Informacion sobre el dueño---\x1b[0m\n");
         mostrarUsuario(aux.ID_usuario, fp);
         p->tam--;
+    }
+}
+void agregarLote(Cola *c, Pila *p){
+    NodoC *nuevo = malloc(sizeof(NodoC));
+    nuevo->sgte = NULL;
+    nuevo->autos = p;
+    if(c->inicio == NULL){
+        c->inicio = c->ultimo = nuevo;
+    }else{
+        nuevo->sgte = c->ultimo;
+        c->ultimo = nuevo;
+    }
+    c->tam++;
+}
+void agregarPiso(Lista *l, NodoL *ptr, Cola *c){
+    NodoL *nuevo = malloc(sizeof(NodoL));
+    if(l->inicio == NULL){
+        l->inicio = nuevo;
+        l->tam++;
+    }
+    else{
+        if(ptr->sgte != NULL){
+            agregarPiso(l, ptr->sgte, c);
+        }else{
+            ptr->sgte = nuevo;
+            l->tam++;
+        }
     }
 }
 Automovil capturarAuto(void){
@@ -185,4 +214,3 @@ Automovil capturarAuto(void){
     }
     return nuevo;
 }
-
