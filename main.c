@@ -11,7 +11,9 @@ typedef struct Automovil{
     char marca[MAX];
     char placa[MAX];
     int tiempo;
+    int ID;
     int ID_usuario;
+    int estacionado;
 }Automovil;
 typedef struct NodoP{
     struct NodoP *sgte;
@@ -43,9 +45,10 @@ Pila * crearPila(void);
 Cola * crearCola(void);
 Lista * crearLista(void);
 void agregarAPila(Pila *, Automovil);
-Automovil capturarAuto(void);
+void capturarAuto(int);
 void agregarLote(Cola *, Pila *);
 int verificarIDUsuario(int, FILE *);
+int verificarIDAuto(int, FILE *);
 void capturarUsuario(FILE *);
 void mostrarUsuario(int, FILE *);
 void agregarPiso(Lista *, NodoL *, Cola *);
@@ -53,7 +56,26 @@ void sacarAuto(Pila *p);
 int main()
 {
     int op;
-    
+    FILE *fp = NULL;
+    do{
+        printf("1 -> Agregar usuario\n2 -> Estacionar auto: ");
+        scanf("%d", &op);
+        limpiarSTDIN();
+        switch(op){
+        case -1:
+            break;
+        case 1:
+            capturarUsuario(fp);
+            break;
+        case 2:
+
+            break;
+        default:
+            printf("\x1b[31mOpcion invalida\x1b[0m\n");
+            break;
+        }
+
+    }while(op != -1);
     return 0;
 }
 void limpiarSTDIN(void){
@@ -123,6 +145,17 @@ int verificarIDUsuario(int ID, FILE *fp){
     fclose(fp);
     return 0;
 }
+int verificarIDAuto(int ID, FILE *fp){
+    fp = fopen("automoviles.dat", "r+b");
+    Automovil aux;
+    fread(&aux, sizeof(Automovil), 1, fp);
+    while(!feof(fp)){
+        if(aux.ID == ID) return 1;
+        fread(&aux, sizeof(Automovil), 1, fp);
+    }
+    fclose(fp);
+    return 0;
+}
 void capturarUsuario(FILE *fp){
     fp = fopen("usuarios.dat", "a+b");
     Usuario nuevo;
@@ -140,12 +173,20 @@ void capturarUsuario(FILE *fp){
     }
     fwrite(&nuevo, sizeof(Usuario), 1, fp);
     fclose(fp);
+    int op;
+    printf("\x1b[36m---Capturando automoviles---\x1b[0m\n");
+    do{
+        capturarAuto(nuevo.ID);
+        printf("\x1b[36m* -1 para salir *\x1b[0m\n");
+        scanf("%d", &op);
+        limpiarSTDIN();
+    }while(op != -1);
 }
 void sacarAuto(Pila *p){
     if(p->tam == 0) printf("\x1b[31mNo hay autos estacionados\x1b[0m\n");
     else{
         Automovil aux;
-        FILE *fp;
+        FILE *fp = NULL;
         aux = p->ultimo->dato;
         if(p->tam == 1){
             free(p->ultimo);
@@ -155,12 +196,12 @@ void sacarAuto(Pila *p){
             p->ultimo = p->ultimo->sgte;
             free(ptr);
         }
-        printf("\x1b[36m-Automovil a sacar---\x1b[0m\n");
+        printf("\x1b[36m---Automovil a sacar---\x1b[0m\n");
         printf("Marca -> %s", aux.marca);
         printf("Modelo -> %s", aux.modelo);
         printf("Placa -> %s", aux.placa);
         printf("Tiempo de guardado -> %d\n", aux.tiempo);
-        printf("\x1b[36m--Informacion sobre el dueño---\x1b[0m\n");
+        printf("\x1b[36m---Informacion sobre el dueño---\x1b[0m\n");
         mostrarUsuario(aux.ID_usuario, fp);
         p->tam--;
     }
@@ -192,9 +233,12 @@ void agregarPiso(Lista *l, NodoL *ptr, Cola *c){
         }
     }
 }
-Automovil capturarAuto(void){
+void capturarAuto(int ID_usuario){
     Automovil nuevo;
     FILE *fp;
+    fp = fopen("automoviles.dat", "a+b");
+    nuevo.ID_usuario = ID_usuario;
+    nuevo.estacionado = 0;
     printf("Marca del auto: ");
     fgets(nuevo.marca, MAX, stdin);
     printf("Modelo del auto: ");
@@ -204,13 +248,14 @@ Automovil capturarAuto(void){
     printf("Tiempo de guardado: ");
     scanf("%d", &nuevo.tiempo);
     limpiarSTDIN();
-    printf("ID del usuario: ");
-    scanf("%d", &nuevo.ID_usuario);
+    printf("ID del auto: ");
+    scanf("%d", &nuevo.ID);
     limpiarSTDIN();
-    while(!verificarIDUsuario(nuevo.ID_usuario, fp)){
-        printf("\x1b[31mNo existe usuario con tal ID, ingrese uno valido: \x1b[0m\n");
-        scanf("%d", &nuevo.ID_usuario);
+    while(verificarIDAuto(nuevo.ID, fp)){
+        printf("\x1b[31mYa existe un automovil con tal ID, ingrese uno valido: \x1b[0m\n");
+        scanf("%d", &nuevo.ID);
         limpiarSTDIN();
     }
-    return nuevo;
+    fwrite(&nuevo, 1, sizeof(Automovil), fp);
+    fclose(fp);
 }
