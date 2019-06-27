@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#define MAX 255
+#define MAX 128
 typedef struct Usuario{
     int ID;
     char nombre[MAX];
@@ -51,14 +51,19 @@ int verificarIDUsuario(int, FILE *);
 int verificarIDAuto(int, FILE *);
 void capturarUsuario(FILE *);
 void mostrarUsuario(int, FILE *);
-void agregarPiso(Lista *, NodoL *, Cola *);
+void agregarPiso(Lista *, Cola *);
 void sacarAuto(Pila *p);
+void modificarAuto(int);
+void loteAXPiso(Lista *);
+Automovil * obtenerAuto(int, int);
+void estacionarAuto(void);
 int main()
 {
     int op;
     FILE *fp = NULL;
+    Lista *estacionamiento = crearLista();
     do{
-        printf("1 -> Agregar usuario\n2 -> Estacionar auto: ");
+        printf("1 -> Agregar usuario\n2 -> Estacionar auto\n3 -> Agregar piso\n4 -> Agregar lote a X piso (-1 para salir) : ");
         scanf("%d", &op);
         limpiarSTDIN();
         switch(op){
@@ -68,7 +73,20 @@ int main()
             capturarUsuario(fp);
             break;
         case 2:
-
+            if(estacionamiento->tam > 0){
+                estacionarAuto();
+            }else printf("\x1b[31mNo ha agregado pisos\x1b[0m\n");
+            break;
+        case 3:
+            agregarPiso(estacionamiento, crearCola());
+            printf(" ----------------------------\n");
+            printf("|Se ha agregado un nuevo piso|\n");
+            printf(" ----------------------------\n");
+            break;
+        case 4:
+            loteAXPiso(estacionamiento);
+            break;
+        case 5:
             break;
         default:
             printf("\x1b[31mOpcion invalida\x1b[0m\n");
@@ -174,7 +192,7 @@ void capturarUsuario(FILE *fp){
     fwrite(&nuevo, sizeof(Usuario), 1, fp);
     fclose(fp);
     int op;
-    printf("\x1b[36m---Capturando automoviles---\x1b[0m\n");
+    printf("\x1b[36m---Capturando automoviles del cliente con ID %d---\x1b[0m\n", nuevo.ID);
     do{
         capturarAuto(nuevo.ID);
         printf("\x1b[36m* -1 para salir *\x1b[0m\n");
@@ -218,20 +236,17 @@ void agregarLote(Cola *c, Pila *p){
     }
     c->tam++;
 }
-void agregarPiso(Lista *l, NodoL *ptr, Cola *c){
+void agregarPiso(Lista *l, Cola *c){
     NodoL *nuevo = malloc(sizeof(NodoL));
-    if(l->inicio == NULL){
-        l->inicio = nuevo;
-        l->tam++;
-    }
+    nuevo->sgte = NULL;
+    nuevo->lotes = malloc(sizeof(Cola));
+    if(l->inicio == NULL) l->inicio = nuevo;
     else{
-        if(ptr->sgte != NULL){
-            agregarPiso(l, ptr->sgte, c);
-        }else{
-            ptr->sgte = nuevo;
-            l->tam++;
-        }
+        NodoL *ptr = l->inicio;
+        while(ptr->sgte != NULL) ptr = ptr->sgte;
+        ptr->sgte = nuevo;
     }
+    l->tam++;
 }
 void capturarAuto(int ID_usuario){
     Automovil nuevo;
@@ -239,15 +254,13 @@ void capturarAuto(int ID_usuario){
     fp = fopen("automoviles.dat", "a+b");
     nuevo.ID_usuario = ID_usuario;
     nuevo.estacionado = 0;
+    nuevo.tiempo = -1;
     printf("Marca del auto: ");
     fgets(nuevo.marca, MAX, stdin);
     printf("Modelo del auto: ");
     fgets(nuevo.modelo, MAX, stdin);
     printf("Placa del auto: ");
     fgets(nuevo.placa, MAX, stdin);
-    printf("Tiempo de guardado: ");
-    scanf("%d", &nuevo.tiempo);
-    limpiarSTDIN();
     printf("ID del auto: ");
     scanf("%d", &nuevo.ID);
     limpiarSTDIN();
@@ -259,3 +272,96 @@ void capturarAuto(int ID_usuario){
     fwrite(&nuevo, 1, sizeof(Automovil), fp);
     fclose(fp);
 }
+Automovil * obtenerAuto(int ID_usuario, int ID_auto){
+    FILE *usuarios = fopen("usuarios.dat", "r+b");
+    FILE *autos = fopen("automoviles.dat", "r+b");
+    if(usuarios != NULL && autos != NULL){
+        Usuario aux;
+        int existe = 0, valido = 0;
+        fread(&aux, sizeof(Usuario), 1, usuarios);
+        while(!feof(usuarios)){
+            if(aux.ID == ID_usuario){
+                existe = 1;
+                break;
+            }
+            fread(&aux, sizeof(Usuario), 1, usuarios);
+        }
+        if(existe){
+            Automovil a;
+            existe = 0;
+            fread(&a, sizeof(Automovil), 1, autos);
+            while(!feof(autos)){
+                if(a.ID == ID_auto){
+                    existe = 1;
+                    if(ID_usuario == a.ID_usuario) valido = 1;
+                    break;
+                }
+                fread(&a, sizeof(Automovil), 1, autos);
+            }
+            if(existe){
+                if(valido){
+                    if(!a.estacionado){
+                        modificarAuto(a.ID);
+                        Automovil *ptr = &a;
+                        return ptr;
+                    }else printf("\x1b[31mAutomovil ya estacionado\x1b[0m\n");
+                }
+                else printf("\x1b[31mTal automovil no pertenece al usuario\x1b[0m\n");
+            }else printf("\x1b[31mNo existe el automovil\x1b[0m\n");
+        }else printf("\x1b[31mNo existe el usuario\x1b[0m\n");
+    }
+    fclose(usuarios);
+    fclose(autos);
+    return NULL;
+}
+void modificarAuto(int ID){
+    FILE *fp = fopen("automoviles.dat", "r+b");
+    if(fp != NULL){
+       Automovil aux;
+       fread(&aux, sizeof(Automovil), 1, fp);
+       while(!feof(fp)){
+           if(aux.ID == ID){
+               long pos = ftell(fp) - (long)sizeof(Automovil);
+               fseek(fp, pos, SEEK_SET);
+               aux.estacionado = 1;
+               fwrite(&aux, sizeof(Automovil), 1, fp);
+               break;
+           }
+           fread(&aux, sizeof(Automovil), 1, fp);
+       }
+    }
+    fclose(fp);
+}
+void loteAXPiso(Lista *l){
+    int index;
+    printf("Ingrese el numero del piso: ");
+    scanf("%d", &index);
+    limpiarSTDIN();
+    if(l->tam > 0){
+        if(index >= 0 && index < l->tam){
+            int cont = 0;
+            NodoL *ptr = l->inicio;
+            while(ptr != NULL){
+                if(cont == index){
+                    agregarLote(ptr->lotes, crearPila());
+                    printf("Tam: %d\n", ptr->lotes->tam);
+                    break;
+                }
+                ptr = ptr->sgte;
+                cont++;
+            }
+        }else printf("\x1b[31mFuera de rango\x1b[0m\n");
+    }else printf("\x1b[31mNo hay pisos\x1b[0m\n");
+}
+void estacionarAuto(void){
+    int ID_usuario, ID_auto;
+    printf("ID del usuario: ");
+    scanf("%d", &ID_usuario);
+    printf("ID del auto: ");
+    scanf("%d", &ID_auto);
+    Automovil *a = obtenerAuto(ID_usuario, ID_auto);
+    if(a != NULL){
+
+    }
+}
+
