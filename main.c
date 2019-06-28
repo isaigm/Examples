@@ -20,7 +20,7 @@ typedef struct NodoP{
     Automovil dato;
 }NodoP;
 typedef struct Pila{
-    NodoP *ultimo;
+    NodoP *inicio;
     int tam;
 }Pila;
 typedef struct NodoC{
@@ -29,8 +29,8 @@ typedef struct NodoC{
 }NodoC;
 typedef struct Cola{
     NodoC *inicio;
-    NodoC *ultimo;
     int tam;
+    int flag;
 }Cola;
 typedef struct NodoL{
     struct NodoL *sgte;
@@ -44,26 +44,30 @@ void limpiarSTDIN(void);
 Pila * crearPila(void);
 Cola * crearCola(void);
 Lista * crearLista(void);
-void agregarAPila(Pila *, Automovil);
+void agregarAPila(Pila **, Automovil);
 void capturarAuto(int);
-void agregarLote(Cola *, Pila *);
+void agregarLote(Cola **, Pila **);
 int verificarIDUsuario(int, FILE *);
 int verificarIDAuto(int, FILE *);
 void capturarUsuario(FILE *);
 void mostrarUsuario(int, FILE *);
-void agregarPiso(Lista *, Cola *);
+void agregarPiso(Lista *);
 void sacarAuto(Pila *p);
 void modificarAuto(int);
-void loteAXPiso(Lista *);
-Automovil * obtenerAuto(int, int);
-void estacionarAuto(void);
+void loteAXPiso(Lista **);
+void mostrarEstado(Lista *);
+void mostrarLotes(Cola *);
+void mostrarAutos(Pila *);
+Automovil obtenerAuto(int, int);
+void estacionarAuto(Lista *);
+void actualizar(void);
 int main()
 {
     int op;
     FILE *fp = NULL;
     Lista *estacionamiento = crearLista();
     do{
-        printf("1 -> Agregar usuario\n2 -> Estacionar auto\n3 -> Agregar piso\n4 -> Agregar lote a X piso (-1 para salir) : ");
+        printf("1 -> Agregar usuario\n2 -> Estacionar auto\n3 -> Agregar piso\n4 -> Agregar lote a X piso\n5 -> Mostrar estado del estacionamiento (-1 para salir): ");
         scanf("%d", &op);
         limpiarSTDIN();
         switch(op){
@@ -74,19 +78,20 @@ int main()
             break;
         case 2:
             if(estacionamiento->tam > 0){
-                estacionarAuto();
+                estacionarAuto(estacionamiento);
             }else printf("\x1b[31mNo ha agregado pisos\x1b[0m\n");
             break;
         case 3:
-            agregarPiso(estacionamiento, crearCola());
+            agregarPiso(estacionamiento);
             printf(" ----------------------------\n");
             printf("|Se ha agregado un nuevo piso|\n");
             printf(" ----------------------------\n");
             break;
         case 4:
-            loteAXPiso(estacionamiento);
+            loteAXPiso(&estacionamiento);
             break;
         case 5:
+            mostrarEstado(estacionamiento);
             break;
         default:
             printf("\x1b[31mOpcion invalida\x1b[0m\n");
@@ -94,6 +99,7 @@ int main()
         }
 
     }while(op != -1);
+
     return 0;
 }
 void limpiarSTDIN(void){
@@ -105,13 +111,13 @@ void limpiarSTDIN(void){
 Pila * crearPila(void){
     Pila *nueva = malloc(sizeof(Pila));
     nueva->tam = 0;
-    nueva->ultimo = NULL;
+    nueva->inicio = NULL;
     return nueva;
 }
 Cola * crearCola(void){
     Cola *nueva = malloc(sizeof(Cola));
     nueva->tam = 0;
-    nueva->inicio = nueva->ultimo = NULL;
+    nueva->inicio = NULL;
     return nueva;
 }
 Lista * crearLista(void){
@@ -119,6 +125,21 @@ Lista * crearLista(void){
     nueva->tam = 0;
     nueva->inicio = NULL;
     return nueva;
+}
+void actualizar(void){
+    FILE *fp = fopen("automoviles.dat", "r+b");
+    if(fp != NULL){
+        Automovil a;
+        fread(&a, sizeof(Automovil), 1, fp);
+        while(!feof(fp)){
+            a.estacionado = 0;
+            long pos = ftell(fp) - (long)sizeof(Automovil);
+            fseek(fp, pos, SEEK_SET);
+            fwrite(&a, sizeof(Automovil), 1, fp);
+            fread(&a, sizeof(Automovil), 1, fp);
+        }
+    }
+    fclose(fp);
 }
 void mostrarUsuario(int ID, FILE *fp){
     fp = fopen("usuarios.dat", "r+b");
@@ -138,18 +159,21 @@ void mostrarUsuario(int ID, FILE *fp){
         }else fprintf(stderr, "\x1b[31mUsuario no encontrado\x1b[0m\n");
     }else fprintf(stderr, "\x1b[31mError al abrir el archivo\x1b[0m\n");
 }
-void agregarAPila(Pila *p, Automovil a){
+void agregarAPila(Pila **p, Automovil a){
     NodoP *nuevo = malloc(sizeof(NodoP));
     nuevo->dato = a;
     nuevo->sgte = NULL;
-    if(p->tam < 3){
-        if(p->ultimo == NULL){
-            p->ultimo = nuevo;
+    if((*p)->tam < 3){
+        if((*p)->inicio == NULL){
+            (*p)->inicio = nuevo;
         }else{
-            nuevo->sgte = p->ultimo;
-            p->ultimo = nuevo;
+            NodoP *ptr = (*p)->inicio;
+            while(ptr->sgte != NULL){
+                ptr = ptr->sgte;
+            }
+            ptr->sgte = nuevo;
         }
-        p->tam++;
+        (*p)->tam++;
     }else printf("\x1b[31mNo hay cupo en el lote\x1b[0m\n");
 }
 int verificarIDUsuario(int ID, FILE *fp){
@@ -205,14 +229,20 @@ void sacarAuto(Pila *p){
     else{
         Automovil aux;
         FILE *fp = NULL;
-        aux = p->ultimo->dato;
         if(p->tam == 1){
-            free(p->ultimo);
-            p->ultimo = NULL;
+            aux = p->inicio->dato;
+            free(p->inicio);
+            p->inicio = NULL;
+
         }else{
-            NodoP *ptr = p->ultimo;
-            p->ultimo = p->ultimo->sgte;
-            free(ptr);
+            NodoP *ptr = p->inicio;
+            while(ptr->sgte->sgte != NULL){
+                ptr = ptr->sgte;
+            }
+            NodoP *e = ptr->sgte;
+            aux = e->dato;
+            ptr->sgte = NULL;
+            free(e);
         }
         printf("\x1b[36m---Automovil a sacar---\x1b[0m\n");
         printf("Marca -> %s", aux.marca);
@@ -224,22 +254,26 @@ void sacarAuto(Pila *p){
         p->tam--;
     }
 }
-void agregarLote(Cola *c, Pila *p){
+void agregarLote(Cola **c, Pila **p){
     NodoC *nuevo = malloc(sizeof(NodoC));
     nuevo->sgte = NULL;
-    nuevo->autos = p;
-    if(c->inicio == NULL){
-        c->inicio = c->ultimo = nuevo;
+    nuevo->autos = *p;
+    (*c)->flag = 1;
+    if((*c)->inicio == NULL){
+        (*c)->inicio = nuevo;
     }else{
-        nuevo->sgte = c->ultimo;
-        c->ultimo = nuevo;
+        NodoC *ptr = (*c)->inicio;
+        while(ptr->sgte != NULL){
+            ptr = ptr->sgte;
+        }
+        ptr->sgte = nuevo;
     }
-    c->tam++;
+    (*c)->tam++;
 }
-void agregarPiso(Lista *l, Cola *c){
+void agregarPiso(Lista *l){
     NodoL *nuevo = malloc(sizeof(NodoL));
     nuevo->sgte = NULL;
-    nuevo->lotes = malloc(sizeof(Cola));
+    nuevo->lotes = crearCola();
     if(l->inicio == NULL) l->inicio = nuevo;
     else{
         NodoL *ptr = l->inicio;
@@ -272,7 +306,7 @@ void capturarAuto(int ID_usuario){
     fwrite(&nuevo, 1, sizeof(Automovil), fp);
     fclose(fp);
 }
-Automovil * obtenerAuto(int ID_usuario, int ID_auto){
+Automovil obtenerAuto(int ID_usuario, int ID_auto){
     FILE *usuarios = fopen("usuarios.dat", "r+b");
     FILE *autos = fopen("automoviles.dat", "r+b");
     if(usuarios != NULL && autos != NULL){
@@ -300,10 +334,8 @@ Automovil * obtenerAuto(int ID_usuario, int ID_auto){
             }
             if(existe){
                 if(valido){
-                    if(!a.estacionado){
-                        modificarAuto(a.ID);
-                        Automovil *ptr = &a;
-                        return ptr;
+                    if(a.estacionado == 0){
+                        return a;
                     }else printf("\x1b[31mAutomovil ya estacionado\x1b[0m\n");
                 }
                 else printf("\x1b[31mTal automovil no pertenece al usuario\x1b[0m\n");
@@ -312,7 +344,9 @@ Automovil * obtenerAuto(int ID_usuario, int ID_auto){
     }
     fclose(usuarios);
     fclose(autos);
-    return NULL;
+    Automovil at;
+    at.ID = -128;
+    return at;
 }
 void modificarAuto(int ID){
     FILE *fp = fopen("automoviles.dat", "r+b");
@@ -332,19 +366,19 @@ void modificarAuto(int ID){
     }
     fclose(fp);
 }
-void loteAXPiso(Lista *l){
+void loteAXPiso(Lista **l){
     int index;
     printf("Ingrese el numero del piso: ");
     scanf("%d", &index);
     limpiarSTDIN();
-    if(l->tam > 0){
-        if(index >= 0 && index < l->tam){
+    if((*l)->tam > 0){
+        if(index >= 0 && index < (*l)->tam){
             int cont = 0;
-            NodoL *ptr = l->inicio;
+            NodoL *ptr = (*l)->inicio;
             while(ptr != NULL){
                 if(cont == index){
-                    agregarLote(ptr->lotes, crearPila());
-                    printf("Tam: %d\n", ptr->lotes->tam);
+                    Pila *p = crearPila();
+                    agregarLote(&ptr->lotes, &p);
                     break;
                 }
                 ptr = ptr->sgte;
@@ -353,15 +387,83 @@ void loteAXPiso(Lista *l){
         }else printf("\x1b[31mFuera de rango\x1b[0m\n");
     }else printf("\x1b[31mNo hay pisos\x1b[0m\n");
 }
-void estacionarAuto(void){
+void estacionarAuto(Lista *l){
     int ID_usuario, ID_auto;
     printf("ID del usuario: ");
     scanf("%d", &ID_usuario);
+    limpiarSTDIN();
     printf("ID del auto: ");
     scanf("%d", &ID_auto);
-    Automovil *a = obtenerAuto(ID_usuario, ID_auto);
-    if(a != NULL){
-
+    limpiarSTDIN();
+    Automovil a = obtenerAuto(ID_usuario, ID_auto);
+    if(a.ID != -128){
+        int tiempo;
+        printf("Ingrese numero de dias de estacionado: ");
+        scanf("%d", &tiempo);
+        limpiarSTDIN();
+        int dias[50], ind = -1;
+        dias[0] = 1;
+        for(int i = 1; i < 50; i++) dias[i] = dias[i-1] + 2;
+        if(tiempo >= 0 && tiempo < 1) ind = 0;
+        else if(tiempo < 0) printf("\x1b[31mTiempo invalido\x1b[0m\n");
+        if(ind != 0 && tiempo > 0){
+            for(int i = 1; i < 50; i++){
+                if(tiempo >= dias[i-1] && tiempo < dias[i]){
+                    ind = i;
+                    break;
+                }
+            }
+        }
+        if(ind != -1){
+            if(ind < l->tam){
+                int cont = 0;
+                NodoL *ptr = l->inicio;
+                while(ptr != NULL){
+                    if(cont == ind) break;
+                    ptr = ptr->sgte;
+                    cont++;
+                }
+                Cola **c = &ptr->lotes;
+                if((*c)->tam > 0){
+                    NodoC *ptrC = (*c)->inicio;
+                    while(ptrC != NULL){
+                        if(ptrC->autos->tam < 3){
+                            agregarAPila(&ptrC->autos, a);
+                            modificarAuto(a.ID);
+                            break;
+                        }
+                        ptrC = ptrC->sgte;
+                    }
+                }else printf("\x1b[31mHay pisos disponibles, pero no hay lotes\x1b[0m\n");
+            }else printf("\x1b[31mNo hay pisos para ese automovil\x1b[0m\n");
+        }
     }
 }
-
+void mostrarLotes(Cola *c){
+    NodoC *ptr = c->inicio;
+    int cont = 0;
+    while(ptr != NULL){
+        printf("---Lote %d---\n", cont);
+        mostrarAutos(ptr->autos);
+        ptr = ptr->sgte;
+        cont++;
+    }
+}
+void mostrarAutos(Pila *p){
+    NodoP *ptr = p->inicio;
+    while(ptr != NULL){
+        printf("ID del auto -> %d\n", ptr->dato.ID);
+        printf("Placa del auto -> %s", ptr->dato.placa);
+        ptr = ptr->sgte;
+    }
+}
+void mostrarEstado(Lista *l){
+    NodoL *ptr = l->inicio;
+    int cont = 0;
+    while(ptr != NULL){
+        printf("---Piso %d---\n", cont);
+        mostrarLotes(ptr->lotes);
+        ptr = ptr->sgte;
+        cont++;
+    }
+}
