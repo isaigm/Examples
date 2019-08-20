@@ -59,7 +59,7 @@ private:
     }
 };
 int main(){
-    Arbol arbol{ 10, 11, -10, -12, -13, 12};
+    Arbol arbol {10, 11, -10, -12, -13, 12};
     arbol.inorden();
     int h = arbol.altura();
     std::cout << h << std::endl;
