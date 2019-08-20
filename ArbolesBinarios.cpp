@@ -1,7 +1,7 @@
 #include <iostream>
 class Nodo{
-    friend class Arbol;
 public:
+    friend class Arbol;
     Nodo(int dato){
         this->dato = dato;
         izq = der = nullptr;
