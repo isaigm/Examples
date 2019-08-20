@@ -1,6 +1,6 @@
 #include <iostream>
 
-struct Nodo{
+class Nodo{
     friend class Arbol;
     Nodo(int dato){
         this->dato = dato;
@@ -13,7 +13,7 @@ private:
 
 };
 
-struct Arbol{
+class Arbol{
 public:
     Arbol(std::initializer_list <int> args){
         for(auto it = args.begin(); it != args.end(); it++){
