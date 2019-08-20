@@ -11,7 +11,6 @@ private:
     Nodo *der;
 
 };
-
 class Arbol{
 public:
     Arbol(std::initializer_list <int> args){
@@ -58,7 +57,6 @@ private:
         }
     }
 };
-
 int main(){
     Arbol arbol{ 10, 11, -10, -12, -13, 12};
     arbol.inorden();
