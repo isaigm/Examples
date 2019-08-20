@@ -1,5 +1,4 @@
 #include <iostream>
-
 class Nodo{
     friend class Arbol;
     Nodo(int dato){
@@ -56,7 +55,6 @@ private:
             int h1 = 1 + altura(raiz_->izq);
             int h2 = 1 + altura(raiz_->der);
             return std::max(h1, h2);
-
         }
     }
 };
