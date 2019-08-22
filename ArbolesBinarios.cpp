@@ -1,4 +1,5 @@
 #include <iostream>
+
 class Nodo{
 public:
     friend class Arbol;
@@ -10,7 +11,6 @@ private:
     int dato;
     Nodo *izq;
     Nodo *der;
-
 };
 class Arbol{
 public:
@@ -19,9 +19,7 @@ public:
             insertar(*it);
         }
     }
-    Arbol(){
-
-    }
+    Arbol(){}
     void insertar(int dato){
         insertar(&raiz, dato);
     }
@@ -29,7 +27,7 @@ public:
         inorden(raiz);
     }
     int altura(){
-        return altura(raiz) - 1;
+        return altura(raiz);
     }
 private:
     Nodo *raiz = nullptr;
@@ -50,18 +48,20 @@ private:
     }
     int altura(Nodo *raiz_){
         if(raiz_ == nullptr){
-            return 0;
+            return -1;
         }else{
             int h1 = 1 + altura(raiz_->izq);
             int h2 = 1 + altura(raiz_->der);
             return std::max(h1, h2);
+
         }
     }
 };
 int main(){
-    Arbol arbol {10, 11, -10, -12, -13, 12};
+    Arbol arbol {10, 11, -10, -12, -13, 12, -15};
     arbol.inorden();
     int h = arbol.altura();
     std::cout << h << std::endl;
     return 0;
 }
+
