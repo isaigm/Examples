@@ -75,24 +75,39 @@ private:
     void eliminarDato(Nodo **raiz_, int dato){
         if(*raiz_ != nullptr){
             if((*raiz_)->dato == dato){
-                if((*raiz_)->izq == nullptr && (*raiz_)->der == nullptr) eliminarNodo(*raiz_);
+                if((*raiz_)->izq == nullptr && (*raiz_)->der == nullptr){
+                    eliminarNodo(raiz_);
+                }
                 else{
                     Nodo *aux = *raiz_;
                     if((*raiz_)->izq != nullptr && (*raiz_)->der == nullptr){
-                        *raiz_ = (*raiz_)->izq;
-                        eliminarNodo(aux);
+                        eliminarNodo(raiz_);
+                        *raiz_ = aux->izq;
                     }else if((*raiz_)->der != nullptr && (*raiz_)->izq == nullptr){
-                        *raiz_ = (*raiz_)->der;
-                        eliminarNodo(aux);
-                    }
+                        eliminarNodo(raiz_);
+                        *raiz_ = aux->der;
+                    }else{
+                        Nodo *nodo = nodoIzq((*raiz_)->der);
+                        int dat = nodo->dato;
+                        (*raiz_)->der = aux->der;
+                        (*raiz_)->izq = aux->izq;
+                        eliminarDato(raiz_, nodo->dato);
+                        (*raiz_)->dato = dat;
+                   }
                 }
             }else if(dato < (*raiz_)->dato) eliminarDato(&(*raiz_)->izq, dato);
             else if(dato > (*raiz_)->dato) eliminarDato(&(*raiz_)->der, dato);
         }
     }
-    void eliminarNodo(Nodo *nodo){
-        delete nodo;
-        nodo = nullptr;
+    Nodo * nodoIzq(Nodo *raiz_){
+        if(raiz_->izq != nullptr){
+            return nodoIzq(raiz_->izq);
+        }
+        return raiz_;
+    }
+    void eliminarNodo(Nodo **nodo){
+        delete *nodo;
+        *nodo = nullptr;
     }
 };
 int main(){
@@ -102,11 +117,10 @@ int main(){
     curs_set(FALSE);
     noecho();
     getmaxyx(stdscr, rows, cols);
-    Arbol arbol {10, 11, -10, -12, -13, 12, -15, -11, -9, -8, 13, 20};
-    arbol.eliminarDato(13);
-    arbol.eliminarDato(12);
-    arbol.inorden(cols/2 - 1,  rows/2 - 10);
-    addch('\n');
+    Arbol arbol {-10, -2, -11, 20, 12, 23, 80, 22, 21, 19};
+    arbol.eliminarDato(20);
+    arbol.inorden(cols/2 - 3,  rows/2 - 12);
     refresh();
     return 0;
 }
+
