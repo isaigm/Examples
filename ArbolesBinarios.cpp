@@ -28,12 +28,16 @@ public:
     }
     void inorden(int x, int y){
         inorden(raiz, x, y);
+        std::cout << std::endl;
     }
     int altura(){
         return altura(raiz);
     }
     int nodos(){
         return nodos(raiz);
+    }
+    int factorDeEquilibrio(){
+        return factorDeEquilibrio(raiz);
     }
 private:
     Nodo *raiz = nullptr;
@@ -70,6 +74,12 @@ private:
             int der = nodos(raiz_->der);
             int izq = nodos(raiz_->izq);
             return 1 + izq + der;
+        }
+    }
+    int factorDeEquilibrio(Nodo * raiz){
+        if(raiz == nullptr) return 0;
+        else{
+            return altura(raiz->der) - altura(raiz->izq);
         }
     }
     void eliminarDato(Nodo **raiz_, int dato){
@@ -118,9 +128,8 @@ int main(){
     noecho();
     getmaxyx(stdscr, rows, cols);
     Arbol arbol {-10, -2, -11, 20, 12, 23, 80, 22, 21, 19};
-    arbol.eliminarDato(20);
     arbol.inorden(cols/2 - 3,  rows/2 - 12);
-    refresh();
+    int f = arbol.factorDeEquilibrio();
     return 0;
 }
 
