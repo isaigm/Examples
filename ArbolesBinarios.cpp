@@ -147,6 +147,9 @@ public:
     int factorDeEquilibrio(){
         return factorDeEquilibrio(raiz);
     }
+    float evaluar(){
+        return evaluar(raiz);
+    }
 private:
     Nodo *raiz = nullptr;
     void insertar(Nodo ** raiz_, int dato){
@@ -166,6 +169,29 @@ private:
             inorden(raiz->der);
             std::cout << ")";
         }
+    }
+    float evaluar(Nodo *raiz){
+       float res = 0;
+        if(raiz != nullptr){
+            if(raiz->der == nullptr && raiz->izq == nullptr) return raiz->dato;
+            if(raiz->esOperador){
+                switch(raiz->dato){
+                    case '+':
+                        res = evaluar(raiz->der) + evaluar(raiz->izq);
+                        break;
+                    case '-':
+                        res = evaluar(raiz->izq) - evaluar(raiz->der);
+                        break;
+                    case '*':
+                        res = evaluar(raiz->der) * evaluar(raiz->izq);
+                        break;
+                    case '/':
+                        res = evaluar(raiz->izq) / evaluar(raiz->der);
+                        break;
+                }
+            }
+        }
+        return res;
     }
     void postorden(Nodo *raiz){
         if(raiz != nullptr){
@@ -264,9 +290,10 @@ private:
     }
 };
 int main(){
-    Tokens tokens = tokenizer("( 543*33)+(62/23)+3");
+    Tokens tokens = tokenizer("(( 543*33)+(62/2)+3)*2 - 10");
     auto t = postfija(tokens);
     Arbol arbol(t);
     arbol.postorden();
+    std::cout << std::fixed << arbol.evaluar() << std::endl;
     return 0;
 }
