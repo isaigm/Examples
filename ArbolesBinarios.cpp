@@ -158,6 +158,8 @@ private:
         }else{
             if((*raiz_)->dato > dato) insertar(&(*raiz_)->izq, dato);
             else if((*raiz_)->dato < dato) insertar(&(*raiz_)->der, dato);
+            balancear(raiz_);
+            (*raiz_)->fe = factorDeEquilibrio(raiz);
         }
     }
     void inorden(Nodo *raiz){
@@ -226,15 +228,39 @@ private:
         (*raiz)->izq = izq->der;
         izq->der = *raiz;
         *raiz = izq;
+        (*raiz)->fe = factorDeEquilibrio(*raiz);
+    }
+    void balancear(Nodo **raiz){
+        if(*raiz != nullptr){
+            if((*raiz)->fe == -2){
+                if(altura((*raiz)->izq->izq) >= altura((*raiz)->izq->der)){
+                    rotacionII(raiz);
+                }else{
+                    rotacionID(raiz);
+                }
+            }else if((*raiz)->fe == 2){
+                if(altura((*raiz)->der->der) >= altura((*raiz)->der->izq)){
+                    rotacionDD(raiz);
+                }else{
+                    rotacionDI(raiz);
+                }
+            }
+        }
     }
     void rotacionDD(Nodo **raiz){
         Nodo *der = (*raiz)->der;
         (*raiz)->der = der->izq;
         der->izq = *raiz;
         *raiz = der;
+        (*raiz)->fe = factorDeEquilibrio(*raiz);
     }
-    void rotacionID([[maybe_unused]] Nodo **raiz){
-
+    void rotacionID(Nodo **raiz){
+        rotacionDD(&(*raiz)->izq);
+        rotacionII(raiz);
+    }
+    void rotacionDI(Nodo **raiz){
+        rotacionII(&(*raiz)->der);
+        rotacionDD(raiz);
     }
     int nodos(Nodo * raiz_){
         if(raiz_ == nullptr){
@@ -262,9 +288,13 @@ private:
                     if((*raiz_)->izq != nullptr && (*raiz_)->der == nullptr){
                         eliminarNodo(raiz_);
                         *raiz_ = aux->izq;
+                        balancear(raiz_);
+                        (*raiz_)->fe = factorDeEquilibrio(raiz);
                     }else if((*raiz_)->der != nullptr && (*raiz_)->izq == nullptr){
                         eliminarNodo(raiz_);
                         *raiz_ = aux->der;
+                        balancear(raiz_);
+                        (*raiz_)->fe = factorDeEquilibrio(raiz);
                     }else{
                         Nodo *nodo = nodoIzq((*raiz_)->der);
                         int dat = nodo->dato;
@@ -272,6 +302,8 @@ private:
                         (*raiz_)->izq = aux->izq;
                         eliminarDato(raiz_, nodo->dato);
                         (*raiz_)->dato = dat;
+                        balancear(raiz_);
+                        (*raiz_)->fe = factorDeEquilibrio(raiz);
                    }
                 }
             }else if(dato < (*raiz_)->dato) eliminarDato(&(*raiz_)->izq, dato);
@@ -295,5 +327,10 @@ int main(){
     Arbol arbol(t);
     arbol.postorden();
     std::cout << std::fixed << arbol.evaluar() << std::endl;
+    Arbol ar{1, 2, 3, 4, 5};
+    ar.inorden();
+    ar.eliminarDato(5);
+    ar.inorden();
+    std::cout << ar.factorDeEquilibrio() << std::endl;
     return 0;
 }
