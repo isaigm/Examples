@@ -1,14 +1,86 @@
 #include <iostream>
 #include <ncurses.h>
+#include <string>
+#include <stack>
+#include <sstream>
+#include <vector>
+bool esOperador(char e){
+    return e == '+' || e == '*' || e == '-' || e == '/';
+};
+using Tokens = std::vector<std::string>;
+Tokens tokenizer(std::string expr){
+    Tokens tokens;
+    size_t it = 0;
+    size_t digitos = 0;
+    while(it < expr.size()){
+        if(expr[it] == '(' || expr[it] == ')' || esOperador(expr[it])){
+            tokens.push_back(expr.substr(it, 1));
+        }
+       else if(std::isdigit(expr[it]) != 0){
+            size_t aux = it;
+            while(std::isdigit(expr[it]) != 0 && it < expr.size()){
+                digitos++;
+                it++;
+            }
+            tokens.push_back(expr.substr(aux, digitos));
+            digitos = 0;
+            it--;
+       }
+       it++;
+    }
+    return tokens;
+}
+Tokens postfija(std::vector<std::string> infija){
+    std::vector<std::string> salida;
+    std::stack<char> pila;
+    auto procedencia = [](char e){
+        if(e == '*' || e == '/') return 1;
+        return 0;
+    };
+    while(infija.size() > 0){
+        std::string token = infija[0];
+        char e = token[0];
+        infija.erase(infija.begin());
+        if(std::isdigit(e) != 0) salida.push_back(token);
+        if(e == '(') pila.push(e);
+        if(e == ')'){
+            while(!pila.empty() && pila.top() != '('){
+                salida.push_back(std::string(1, pila.top()));
+                pila.pop();
+            }
+            if(pila.top() == '(') pila.pop();
+            else{
+                //error
+            }
+        }
+        if(esOperador(e)){
+            while(!pila.empty() && esOperador(pila.top()) && procedencia(pila.top()) >= procedencia(e)){
+                salida.push_back(std::string(1, pila.top()));
+                pila.pop();
+            }
+            pila.push(e);
+        }
+    }
+    while(!pila.empty()){
+        salida.push_back(std::string(1, pila.top()));
+        pila.pop();
+    }
+    return salida;
+}
+
 class Nodo{
 public:
     friend class Arbol;
     Nodo(int dato){
         this->dato = dato;
+        fe = 0;
         izq = der = nullptr;
+        esOperador = false;
     }
 private:
     int dato;
+    int fe;
+    bool esOperador;
     Nodo *izq;
     Nodo *der;
 };
@@ -19,15 +91,51 @@ public:
             insertar(*it);
         }
     }
-    Arbol(){}
+    Arbol(Tokens postfija){
+        std::stack<Nodo *> pila;
+        while(!postfija.empty()){
+            std::string token = postfija[0];
+            char e = token[0];
+            postfija.erase(postfija.begin());
+            if(std::isdigit(e) != 0) {
+                std::stringstream ss(token);
+                int dato;
+                ss >> dato;
+                pila.push(new Nodo(dato));
+            }
+            if(esOperador(e)){
+                if(pila.size() < 2) {} //error
+                else{
+                    Nodo *nuevo = new Nodo(e);
+                    nuevo->esOperador = true;
+                    Nodo *n1 = pila.top();
+                    pila.pop();
+                    Nodo *n2 = pila.top();
+                    pila.pop();
+                    nuevo->der = n1;
+                    nuevo->izq = n2;
+                    pila.push(nuevo);
+                }
+            }
+        }
+        raiz = pila.top();
+    }
+    void postorden(){
+        postorden(raiz);
+        std::cout << std::endl;
+    }
+    void preorden(){
+        preorden(raiz);
+        std::cout << std::endl;
+    }
     void eliminarDato(int dato){
         eliminarDato(&raiz, dato);
     }
     void insertar(int dato){
         insertar(&raiz, dato);
     }
-    void inorden(int x, int y){
-        inorden(raiz, x, y);
+    void inorden(){
+        inorden(raiz);
         std::cout << std::endl;
     }
     int altura(){
@@ -49,12 +157,32 @@ private:
             else if((*raiz_)->dato < dato) insertar(&(*raiz_)->der, dato);
         }
     }
-    void inorden(Nodo *raiz, int x, int y){
+    void inorden(Nodo *raiz){
         if(raiz != nullptr){
-            inorden(raiz->izq, x - 3, y + 1);
-            mvprintw(y, x, "%d", raiz->dato);
-            refresh();
-            inorden(raiz->der, x + 3, y + 1);
+            std::cout << "(";
+            inorden(raiz->izq);
+            if(raiz->esOperador) std::cout << char(raiz->dato);
+            else std::cout << raiz->dato;
+            inorden(raiz->der);
+            std::cout << ")";
+        }
+    }
+    void postorden(Nodo *raiz){
+        if(raiz != nullptr){
+            postorden(raiz->izq);
+            postorden(raiz->der);
+            if(raiz->esOperador) std::cout << char(raiz->dato);
+            else std::cout << raiz->dato;
+            std::cout << " ";
+        }
+    }
+    void preorden(Nodo *raiz){
+        if(raiz != nullptr){
+            if(raiz->esOperador) std::cout << char(raiz->dato);
+            else std::cout << raiz->dato;
+            std::cout << " ";
+            preorden(raiz->izq);
+            preorden(raiz->der);
         }
     }
     int altura(Nodo *raiz_){
@@ -66,6 +194,21 @@ private:
             return std::max(h1, h2);
 
         }
+    }
+    void rotacionII(Nodo **raiz){
+        Nodo *izq = (*raiz)->izq;
+        (*raiz)->izq = izq->der;
+        izq->der = *raiz;
+        *raiz = izq;
+    }
+    void rotacionDD(Nodo **raiz){
+        Nodo *der = (*raiz)->der;
+        (*raiz)->der = der->izq;
+        der->izq = *raiz;
+        *raiz = der;
+    }
+    void rotacionID([[maybe_unused]] Nodo **raiz){
+
     }
     int nodos(Nodo * raiz_){
         if(raiz_ == nullptr){
@@ -121,15 +264,9 @@ private:
     }
 };
 int main(){
-    int rows, cols;
-    initscr();
-    keypad(stdscr, TRUE);
-    curs_set(FALSE);
-    noecho();
-    getmaxyx(stdscr, rows, cols);
-    Arbol arbol {-10, -2, -11, 20, 12, 23, 80, 22, 21, 19};
-    arbol.inorden(cols/2 - 3,  rows/2 - 12);
-    int f = arbol.factorDeEquilibrio();
+    std::vector<std::string> tokens = tokenizer("( 543*33)+(62/23)+3");
+    auto t = postfija(tokens);
+    Arbol arbol(t);
+    arbol.postorden();
     return 0;
 }
-
