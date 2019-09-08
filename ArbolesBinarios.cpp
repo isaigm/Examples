@@ -264,7 +264,7 @@ private:
     }
 };
 int main(){
-    std::vector<std::string> tokens = tokenizer("( 543*33)+(62/23)+3");
+    Tokens tokens = tokenizer("( 543*33)+(62/23)+3");
     auto t = postfija(tokens);
     Arbol arbol(t);
     arbol.postorden();
