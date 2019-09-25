@@ -1,5 +1,3 @@
-
-		
 #include <iostream>
 class Pagina {
     friend class ArbolB;
