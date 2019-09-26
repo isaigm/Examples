@@ -489,7 +489,59 @@ Ej97 3\n 5\n 7\n 9\n Hecho\n
 Ej100 no entra en el bucle; si es negativo, entra en el bucle
 """
 def Ej103():
-    pass
+    for multiplo in range(1, 151//6):
+        print(multiplo*6)
+def Ej104():
+    n = int(input("Valor de n: "))
+    m = int(input("Valor de m: "))
+    for multiplo in range(n, (m*n+1), n):
+        print(multiplo)
+def Ej105():
+    for pot in range(0, 30+1):
+        print(2**pot)
+def Ej107():
+    n = int(input("Inf: "))
+    m = int(input("Sup: "))
+    res = 0
+    for num in range(n, m+1):
+        res += num
+    print("Resultad " + str(res))
+def Ej108():
+    n = int(input("Inf: "))
+    m = int(input("Sup: "))
+    if n > m:
+        print("No se puede calcular")
+    else:
+        res = 0
+        for num in range(n, m+1):
+            res += num
+            print("Resultad " + str(res))
+def Ej109():
+    n = int(input("Valor de n: "))
+    product = 1
+    for i in range(1, n + 1):
+        product *= i
+    print("{0}! = {1}".format(n, product))
+def Ej110():
+    n = int(input("Valor de n: "))
+    m = int(input("Valor de m: "))
+    if n < m:
+        raise ValueError("n debe ser mayor que m")
+    def Factorial(k = 1):
+        product = 1
+        for i in range(1, k + 1):
+            product *= i
+        return product
+    combinations = Factorial(n)//(Factorial(n-m)*Factorial(m))
+    print("Combinaciones posibles " + str(combinations))
+#Ej111 es correcto
+def Ej112():
+    flag = True
+    while flag:
+        num = int(input("Introduce un numero entre 1 y 10"))
+        if num >= 1 and num <= 10:
+            flag = False
+            
 if __name__ == "__main__":
     Ej1()
     Ej2()
@@ -529,3 +581,9 @@ if __name__ == "__main__":
     Ej84()
     Ej87()
     Ej88()
+    Ej103()
+    #Ej104()
+    #Ej105()
+    #Ej107()
+    #Ej109()
+    Ej110()
