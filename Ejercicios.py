@@ -482,7 +482,14 @@ def Ej88():
 #ej89 se esta dividiendo entre 0
 #ej90 no, no estan declaradas a, b, c
 #Ej91 14, 18
-    
+"""
+Ej95 0\n 1\n 2\n 3\n Hecho\n
+Ej96 0\n 2\n 4\n 6\n 8\n Hecho\n
+Ej97 3\n 5\n 7\n 9\n Hecho\n
+Ej100 no entra en el bucle; si es negativo, entra en el bucle
+"""
+def Ej103():
+    pass
 if __name__ == "__main__":
     Ej1()
     Ej2()
