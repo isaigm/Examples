@@ -4,7 +4,7 @@
 Created on Tue Sep 17 13:48:03 2019
 @author: isai
 """
-import math, bitstring
+import math, bitstring, numpy as np
 import matplotlib.pyplot as plt,  matplotlib.patches as patches
 def Ej1():
     print(2**16 - 1)
@@ -541,7 +541,135 @@ def Ej112():
         num = int(input("Introduce un numero entre 1 y 10"))
         if num >= 1 and num <= 10:
             flag = False
-            
+def Ej113():
+    flag = True
+    while flag:
+        texto = input("Introduce un texto: ")
+        if any([letra.isupper() for letra in texto]):
+            print("No letras mayusculas")
+        else:
+            flag = False
+def Ej116():
+    vector1 = []
+    vector2 = []
+    def capturar(arr):
+        for i in range(0, 3):
+            componente = int(input("Introduce componente {0}: ".format(i+1)))
+            arr.append(componente)
+    def producto_punto(vector1, vector2):
+        dot_product = sum([i*j for i, j in zip(vector1, vector2)])
+        return dot_product
+    def longitud(vector):
+        return math.sqrt(vector[0]**2 + vector[1]**2 + vector[2]**2)
+    flag = True
+    while flag:
+        print("1) Introducir el primer vector\n2) Introducir el segundo vector\n3) Calcular la suma")
+        print("4) Calcular la diferencia\n5) Producto escalar\n6) Producto vectorial\n7) Calcular angulo")
+        print("8) Longitud\n9) Finalizar")
+        choice = int(input())
+        if choice == 1:
+            capturar(vector1)
+        elif choice == 2:
+            capturar(vector2)
+        elif choice == 3:
+            print("La suma es {0}".format(sum(vector1) + sum(vector2)))
+        elif choice == 4:
+            print("La diferencia es {0}".format(sum(vector1) - sum(vector2)))
+        elif choice == 5:
+            dot_product = producto_punto(vector1, vector2)
+            print("El producto punto es {0}".format(dot_product))
+        elif choice == 6:
+            cross = [vector1[1]*vector2[2] - vector1[2]*vector2[1], vector1[2]*vector2[0] - vector1[0]*vector2[2], vector1[0]*vector2[1] - vector1[1]*vector2[0]]
+            print("Producto cruz")
+            print(cross)
+        elif choice == 7:
+            arg = producto_punto(vector1, vector2) / (longitud(vector1)*longitud(vector2))
+            ang = (180/math.pi) * math.acos(arg)
+            print("Angulo {0:.3f}".format(ang))
+        elif choice == 8:
+            vec = int(input("Cual vector?: "))
+            if vec == 1:
+                print("Longitud {0:.3f}".format(longitud(vector1)))
+            elif vec == 2:
+                print("Longitud {0:.3f}".format(longitud(vector2)))
+        elif choice == 9:
+            flag = False
+        else:
+            print("Opcion incorrecta")
+def Ej117():
+    num = int(input("Dame un numero: "))
+    for i in range(1, 11):
+        print("{0} x {1} = {2}".format(num, i, num*i))
+def Ej119():
+    num = int(input("Dame un numero: "))
+    for r in range(2, 101):
+        print("{0}^(1/{1}) = {2:.3f}".format(num, r, num**(1/r)))
+def Ej120():
+    for par in range(0, 201, 2):
+        print(par)
+def Ej121():
+    for par in range(200, -1, -2):
+        print(par)
+def Ej122():
+    num = int(input("Dame un numero: "))
+    for par in range(2, num, 2):
+        print(par)
+def Ej124():
+    n = int(input("Dame un numero: "))
+    m = int(input("Dame otro numero: "))
+    suma = 0
+    for i in range(n, m + 1):
+        suma += i**2
+    print("Suma de cuadrados %" % suma) 
+def Ej129(a, b):
+    r = a % b
+    while r != 0:
+        a = b
+        b = r
+        r = a % b
+    return b
+def Ej130(a, b, c):
+    return Ej129(Ej129(a, b), c)
+def Ej133():
+    n =  int(input("Introduce un numero > 0"))
+    div = 0
+    for i in range(2, int(math.sqrt(n)) + 1):
+        if n % i == 0:
+            div += 1
+        
+    if div == 0:
+        print("{0} es numero primo".format(n))
+def Ej135():
+    numeros = []
+    flag = True
+    while flag:
+        n = int(input("Introduce un numero: "))
+        if n < 0:
+            flag = False
+            print("Numero maximo: {0}".format(max(numeros)))
+        else:
+            numeros.append(n)
+def Ej139():
+    x = np.linspace(-2, 2, 100)
+    y = 1/(x+1)
+    plt.plot([-1], [0], marker='o', markersize=3, color="red")
+    plt.plot(x, y)
+    plt.show()
+def Ej140():
+    a = 1
+    b = -2
+    c = -3
+    z1 = -10
+    z2 = 10
+    x = np.linspace(z1, z2, 400)
+    y = a*x**2 + b*x + c
+    plt.plot(x, y)
+    print(np.min(y))
+    print(np.max(y))
+    print(np.roots([a, b, c]))
+    plt.axhline(0, color='black')
+    plt.axvline(0, color='black')
+    plt.show()
 if __name__ == "__main__":
     Ej1()
     Ej2()
@@ -558,10 +686,10 @@ if __name__ == "__main__":
     #Ej39()
     #Ej40()
     #Ej45()
-    Ej46()
-    Ej47()
-    Ej48()
-    Ej49()
+    #Ej46()
+    #Ej47()
+    #Ej48()
+    #Ej49()
     #Ej50()
     #Ej51()
     #Ej58()
@@ -575,15 +703,27 @@ if __name__ == "__main__":
     #Ej72()
     #Ej73()
     #Ej74()
-    Ej80()
-    Ej81()
-    Ej83()
-    Ej84()
-    Ej87()
-    Ej88()
-    Ej103()
+    #Ej80()
+    #Ej81()
+    #Ej83()
+    #Ej84()
+    #Ej87()
+    #Ej88()
+    #Ej103()
     #Ej104()
     #Ej105()
     #Ej107()
     #Ej109()
-    Ej110()
+    #Ej110()
+    #Ej113()
+    #Ej116()
+    #Ej117()
+    #Ej119()
+    #Ej120()
+    #Ej121()
+    #Ej129(124, 18)
+    print("MCD = {0}".format(Ej130(18, 99, 48)))
+    #Ej133()
+    #Ej135()
+    Ej139()
+    Ej140()
