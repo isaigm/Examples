@@ -714,12 +714,10 @@ def Ej142():
             except Exception as e:
                 print(e)
                 print('Cuerpos en misma pos')
-                i = 10001
-            
+                i = 10001 
         screen.fill((255, 255, 255))
         pygame.draw.circle(screen, (255,0,100),(int(x1), 600-int(y1)), m1)
         pygame.draw.circle(screen, (100,0,255),(int(x2), 600-int(y2)), m2)
-        
         pygame.display.flip()
     pygame.quit()
     
@@ -760,8 +758,6 @@ def Ej143():
         except Exception as e:
             print(e)
             print('Cuerpos en misma pos')
-           
-            
         screen.fill((255, 255, 255))
         pygame.draw.circle(screen, (255,0,100),(int(x1), 600-int(y1)), m1)
         pygame.draw.circle(screen, (100,0,255),(int(x2), 600-int(y2)), m2)
@@ -779,12 +775,10 @@ def Ej145():
             self.sc = pygame.transform.scale(self.img, size)
             self.rect = self.sc.get_rect()
             self.rect.x = pos[0]
-            self.rect.y = pos[1]
-            
-            
+            self.rect.y = pos[1]     
     quitar = True
-    nave = Entity('/home/xubuntu/Downloads/nave.png',(600, 50), (90, 90))
-    plataforma = Entity('/home/xubuntu/Downloads/plataforma.png',(0, 600), (500, 50))
+    nave = Entity('nave.png',(600, 50), (90, 90))
+    plataforma = Entity('plataforma.png',(0, 600), (500, 50))
     g = -.001
     vy = 0
     while quitar:
@@ -800,16 +794,12 @@ def Ej145():
                     nave.rect.y -= 40
                 elif event.key == pygame.K_DOWN:
                     nave.rect.y += 40
-
-            
         screen.fill((0, 0, 0))
         screen.blit(nave.sc, nave.rect)
         screen.blit(plataforma.sc, plataforma.rect)
         pygame.display.flip()
     pygame.quit()
         
-    
-    
 """
 Ej152 
 /n
@@ -826,6 +816,33 @@ def Ej156():
     print(result)
 #Ej157 no funciona
 #Ej158 si funciona
+def Ej159():
+    cadena = input("Introduce una cadena: ")
+    print("Cantidad de espacios en blanco %d" % cadena.count(' '))
+def Ej160():
+    cadena = input("Introduce una cadena: ")
+    count = 0
+    for s in cadena:
+        if s.isupper():
+            count += 1
+    print("Cantidad de mayusculas %d" % count)
+def Ej161():
+    cadena = input("Introduce una cadena: ")
+    flags = [s.isdigit() for s in cadena]
+    if(any(flags)):
+        print("Contiene digito")
+    else:
+        print("No contiene digito")
+def Ej165():
+    frase = input("Introduce una frase: ")
+    res = frase.split()
+    print("Cantidad de palbras %d" % len(res))
+def Ej167():
+    frase = input("Introduce una frase: ")
+    k = int(input("Cantidad de caracteres: "))
+    words = frase.split()
+    count = sum([len(word) == k for word in words])
+    print("Palabras con tal longitud %d" % count)
 if __name__ == "__main__":
     Ej1()
     Ej2()
@@ -886,5 +903,9 @@ if __name__ == "__main__":
     #Ej142()
     #Ej143()
     #Ej145()
-    Ej156()
-                    
+    #Ej156()
+    #Ej159()
+    #Ej160()
+    #Ej161()
+    #Ej165()
+    Ej167()              
