@@ -6,6 +6,11 @@ Created on Tue Sep 17 13:48:03 2019
 """
 import math, bitstring, numpy as np
 import matplotlib.pyplot as plt,  matplotlib.patches as patches
+import pygame
+from pygame.locals import * 
+pygame.init()
+pygame.mixer.quit()
+
 def Ej1():
     print(2**16 - 1)
     print('1' * 16)
@@ -655,6 +660,7 @@ def Ej139():
     plt.plot([-1], [0], marker='o', markersize=3, color="red")
     plt.plot(x, y)
     plt.show()
+    
 def Ej140():
     a = 1
     b = -2
@@ -670,6 +676,156 @@ def Ej140():
     plt.axhline(0, color='black')
     plt.axvline(0, color='black')
     plt.show()
+    
+def Ej142():
+    screen = pygame.display.set_mode((800, 600))
+    flag=True
+    x1 = 400
+    y1 = 300
+    velx1 = 0.1
+    vely1 = 0
+    m1 = 20
+    x2 = x1 #+ 100
+    y2 = y1 #+ 100
+    velx2 = -0.1
+    vely2 = 0
+    m2 = 20
+    i = 0
+    while(flag):
+        for event in pygame.event.get():
+            if event.type==pygame.QUIT:
+                flag=False     
+        if i < 10000:
+            r3 = math.sqrt((x2- x1)**2 + (y2-y1)**2)**3      
+            try:
+                a_x1 = m2*(x2 - x1)/r3
+                a_y1 = m2*(y2-y1)/r3
+                a_x2 = m1*(x1-x2)/r3
+                a_y2 = m1*(y1-y2)/r3
+                velx1 += a_x1
+                vely1 += a_y1
+                velx2 += a_x2
+                vely2 += a_y2
+                x1 += velx1
+                y1 += vely1
+                x2 += velx2
+                y2 += vely2
+                i += 1
+            except Exception as e:
+                print(e)
+                print('Cuerpos en misma pos')
+                i = 10001
+            
+        screen.fill((255, 255, 255))
+        pygame.draw.circle(screen, (255,0,100),(int(x1), 600-int(y1)), m1)
+        pygame.draw.circle(screen, (100,0,255),(int(x2), 600-int(y2)), m2)
+        
+        pygame.display.flip()
+    pygame.quit()
+    
+    
+def Ej143():
+    screen = pygame.display.set_mode((800, 600))
+    flag=True
+    x1 = 400
+    y1 = 300
+    velx1 = 0.1
+    vely1 = 0
+    m1 = 20
+    x2 = x1 + 100
+    y2 = y1 + 100
+    velx2 = -0.1
+    vely2 = 0
+    m2 = 20
+    i = 0
+    pygame.display.set_caption('Simulación gravitacional')
+    while(flag):
+        for event in pygame.event.get():
+            if event.type==pygame.QUIT:
+                flag=False  
+        r3 = math.sqrt((x2- x1)**2 + (y2-y1)**2)**3      
+        try:
+            a_x1 = m2*(x2 - x1)/r3
+            a_y1 = m2*(y2-y1)/r3
+            a_x2 = m1*(x1-x2)/r3
+            a_y2 = m1*(y1-y2)/r3
+            velx1 += a_x1
+            vely1 += a_y1
+            velx2 += a_x2
+            vely2 += a_y2 
+            x1 += velx1
+            y1 += vely1
+            x2 += velx2
+            y2 += vely2
+        except Exception as e:
+            print(e)
+            print('Cuerpos en misma pos')
+           
+            
+        screen.fill((255, 255, 255))
+        pygame.draw.circle(screen, (255,0,100),(int(x1), 600-int(y1)), m1)
+        pygame.draw.circle(screen, (100,0,255),(int(x2), 600-int(y2)), m2)
+        
+        pygame.display.flip()
+    pygame.quit()
+    
+def Ej145():
+    screen = pygame.display.set_mode((1280, 680))
+    pygame.display.set_caption('Simulación nave')
+    class Entity(pygame.sprite.Sprite):
+        def __init__(self, ruta, pos, size):
+            pygame.sprite.Sprite.__init__(self)
+            self.img = pygame.image.load(ruta).convert_alpha()
+            self.sc = pygame.transform.scale(self.img, size)
+            self.rect = self.sc.get_rect()
+            self.rect.x = pos[0]
+            self.rect.y = pos[1]
+            
+            
+    quitar = True
+    nave = Entity('/home/xubuntu/Downloads/nave.png',(600, 50), (90, 90))
+    plataforma = Entity('/home/xubuntu/Downloads/plataforma.png',(0, 600), (500, 50))
+    g = -.001
+    vy = 0
+    while quitar:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                quitar = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    nave.rect.x -= 40
+                elif event.key == pygame.K_RIGHT:
+                    nave.rect.x += 40    
+                elif event.key == pygame.K_UP:
+                    nave.rect.y -= 40
+                elif event.key == pygame.K_DOWN:
+                    nave.rect.y += 40
+
+            
+        screen.fill((0, 0, 0))
+        screen.blit(nave.sc, nave.rect)
+        screen.blit(plataforma.sc, plataforma.rect)
+        pygame.display.flip()
+    pygame.quit()
+        
+    
+    
+"""
+Ej152 
+/n
+octal
+        uno
+"""
+#Ej153 print('\\\\')
+#Ej154 emite un pitido
+def Ej156():
+    DNI = int(input('Ingrese numero del DNI: '))
+    final = 'TRWAGMYFPDXBNJZSQVHLCKE'
+    index = DNI % 23
+    result = str(DNI) + final[index]
+    print(result)
+#Ej157 no funciona
+#Ej158 si funciona
 if __name__ == "__main__":
     Ej1()
     Ej2()
@@ -725,5 +881,10 @@ if __name__ == "__main__":
     print("MCD = {0}".format(Ej130(18, 99, 48)))
     #Ej133()
     #Ej135()
-    Ej139()
-    Ej140()
+    #Ej139()
+    #Ej140()
+    #Ej142()
+    #Ej143()
+    #Ej145()
+    Ej156()
+                    
