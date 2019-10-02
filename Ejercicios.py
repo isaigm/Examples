@@ -4,7 +4,7 @@
 Created on Tue Sep 17 13:48:03 2019
 @author: isai
 """
-import math, bitstring, numpy as np
+import math, bitstring, collections, numpy as np
 import matplotlib.pyplot as plt,  matplotlib.patches as patches
 import pygame
 from pygame.locals import * 
@@ -843,6 +843,93 @@ def Ej167():
     words = frase.split()
     count = sum([len(word) == k for word in words])
     print("Palabras con tal longitud %d" % count)
+def Ej168():
+    frase = input("Introduce una frase: ")
+    k = int(input("Cantidad de caracteres: "))
+    words = frase.split()
+    flags = [len(word) == k for word in words]
+    if(any(flags)):
+        print("Al menos una tiene %d caracteres" % k)
+    else:
+        print("Ninguna")
+def Ej170():
+    frase = input("Introduce una frase: ")
+    k = int(input("Cantidad de caracteres: "))
+    words = frase.split()
+    flags = [len(word) >= k for word in words]
+    if(any(flags)):
+        print("Hay palabras mas largas")
+    else:
+        print("No hay")
+def Ej171():
+    frase = input("Introduce una frase: ")
+    k = int(input("Cantidad de caracteres: "))
+    words = frase.split()
+    flags = [len(word) < k for word in words]
+    if(all(flags)):
+        print("Todas las palabras son cortas")
+    else:
+        print("Hay alguna palabra mas larga")
+def Ej173():
+    cadena = input("Introduce una cadena: ")
+    count = sum([s.isdigit() for s in cadena])
+    print("Cantidad de digitos %d" % count)
+def Ej175():
+    try:
+        entero = int(input("Introduce un numero: "))
+    except Exception as e:
+        print("No es numero")
+    else:
+        print("Es numero")
+def Ej176():
+    invalidos = '!"#$%&/()=?\'¿¡¨´+*~{[^]`}-.;:|¬°'
+    cadena = input("Introduzca una cadena: ")
+    if not cadena[0].isdigit() and cadena.count(' ') == 0:
+        flag = True
+        for i in range(1, len(cadena)):
+            if flag:
+                for v in invalidos:
+                    if v == cadena[i]:
+                        print("Identificador invalido")
+                        flag = False
+            else:
+                break
+        if flag:
+            print("Identificador valido")
+    else:
+        print("Identificador invalido")
+def Ej177():
+    try:
+        flotante = float(input("Introduce un numero flotante"))
+    except Exception:
+        print("Invalido")
+    else:
+        print("Es flotante")
+def Ej178():
+    cadena = input("Introduce una cadena: ")
+    pila = collections.deque()
+    balanceados = True
+    for it in cadena:
+        if it == '(':
+            pila.append('(')
+        elif it == ')':
+                if len(pila) == 0:
+                    balanceados = False
+                    break
+                else:    
+                    pila.pop()
+    if len(pila) == 0 and balanceados:
+        print("Cadena balanceada")
+    else:
+        print("Cadena no balanceada")
+def Ej179():
+    cadena = input("Introduce una cadena: ")
+    flags = [k == '1' or k == '0' for k in cadena]
+    if(all(flags)):
+        print("Representa un numero binario")
+    else:
+        print("No representa un numero binario")
+#Ej181 no es correcta        
 if __name__ == "__main__":
     Ej1()
     Ej2()
@@ -908,4 +995,10 @@ if __name__ == "__main__":
     #Ej160()
     #Ej161()
     #Ej165()
-    Ej167()              
+    #Ej167()
+    #Ej168()
+    #Ej173()
+    #Ej175()
+    #Ej176()
+    #Ej178()
+    Ej179()          
