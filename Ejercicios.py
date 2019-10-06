@@ -4,7 +4,7 @@
 Created on Tue Sep 17 13:48:03 2019
 @author: isai
 """
-import math, bitstring, collections, numpy as np
+import math, bitstring, collections, random as rand, numpy as np
 import matplotlib.pyplot as plt,  matplotlib.patches as patches
 import pygame
 from pygame.locals import * 
@@ -929,7 +929,266 @@ def Ej179():
         print("Representa un numero binario")
     else:
         print("No representa un numero binario")
-#Ej181 no es correcta        
+#Ej181 no es correcta    
+def Ej187():
+    cad = input("Introduce una cadena: ")
+    res = 0
+    if cad[0] == '0':
+        if cad[1] == 'x' or cad[1] == 'X':
+            aux = "".join(reversed(cad[2:len(cad)]))
+            print(aux)
+            letras_aux = 'abcdef'
+            letras = {'a' : 10, 'b' : 11, 'c' : 12, 'd' : 13, 'e' : 14, 'f' : 15}
+            for i in range(0, len(aux)):
+                if not aux[i].isdigit() and aux[i] in letras_aux:
+                    res += math.pow(16, i) * letras[aux[i]]
+                else:
+                    res += math.pow(16, i) * int(aux[i])
+        else:
+            aux = "".join(reversed(cad[1:len(cad)]))
+            for i in range(0, len(aux)):
+                res += math.pow(8, i) * int(aux[i])
+    else:
+        res = int(cad)
+    print(res)
+def Ej188():
+    num = int(input("Dame un numero: "))
+    aux = num
+    result = ""
+    while aux > 0:
+        result += str(aux%8)
+        aux //= 8
+    result = "".join(reversed(result))
+    print("Numero en octal " +  result)
+def Ej190():
+    word = input("Introduce una cadena: ")
+    count = 0
+    for i in range(1, len(word)):
+        if word[i] > word[i-1]:
+            count += 1
+    if count == len(word)-1:
+        print("Palabra alfabetica")
+    else:
+        print("No alfabetica")
+def Ej191():
+    cad = input("Introduce una cadena: ")
+    if cad == "".join(reversed(cad)):
+        print("Palindromo")
+def Ej192():
+    cad = input("Introduce una cadena: ").replace(" ", "")
+    if cad == "".join(reversed(cad)):
+        print("Frase palindroma")
+def Ej194():
+    cad = input("Introduce una cadena: ")
+    vocales_may = 'AEIOU'
+    vocales_min = 'aeiou'
+    result = ""
+    for i in cad:
+        if i in vocales_min or i in vocales_may:
+            result += '.'
+        else:
+            result += i
+    print(result)
+def Ej195():
+    cad = input("Introduce una cadena: ")
+    result = cad.split('.')
+    print(result[len(result)-1])
+def Ej197():
+    text = input("Introduce texto a encriptar: ")
+    result = ""
+    for le in text:
+        if le.isdigit():
+            if int(le) + 2 > 9:
+                result += str((int(le) + 2) % 9)
+            else:
+                result += str(int(le) + 2)
+        else:
+            if le.isupper():
+                if ord(le) + 2 > ord('Z'):
+                    result += chr(ord('A') + ((ord(le) + 2) % ord('Z')))
+                else:
+                    result += chr(ord(le) + 2)
+            else:
+                if ord(le) + 2 > ord('z'):
+                    result += chr(ord('a') + ((ord(le) + 2) % ord('z')))
+                else:
+                    result += chr(ord(le) + 2)
+    print(result)
+def Ej201():
+    text = input("Introduce un texto: ")
+    i = int(input("Indice: "))
+    n = int(input("N: "))
+    print(text[i:i+n+1])
+def Ej204():
+    text = "Ejemplo"
+    i = 0
+    while i < len(text):
+        print(text[0:i+1])
+        i += 1
+def Ej205():
+    text = "Ejemplo"
+    n = 4
+    i = 0
+    while i <= len(text) - n:
+        print(text[i:i+n])
+        i += 1
+def Ej207():
+    a = input("Cadena A: ")
+    b = input("Cadena B: ")
+    if b == a[0:len(b)]:
+        print("B es prefijo de A")
+    else:
+        print("B no es prefijo de A")
+def Ej209():
+    a = input("Cadena A: ")
+    b = input("Cadena B: ")
+    prefix = ""
+    i = 0
+    while a[i] == b[i] and i < len(a):
+        prefix += a[i]
+        i += 1
+    print(prefix)
+#Ej217 imprime 1 diez veces
+"""
+Ej218
+false
+false
+false
+false
+true
+true
+true
+false
+true
+true
+false
+"""
+"""
+Ej220
+true
+false
+true
+"""
+def Ej224():
+    a = range(1, 4)
+    a = [i*i for i in a]
+    print(a)
+def Ej225():
+    n = int(input("N: "))
+    lista = range(1, n)
+    print(lista)
+def Ej226():
+    a = [1, -1, 2, 3, -5, -10]
+    no_zeros = []
+    for i in a:
+        if i < 0:
+            no_zeros.append(0)
+        else:
+            no_zeros.append(i)
+    print(no_zeros)
+def Ej229():
+    n = int(input("Introduce un entero positivo: "))
+    assert(n >= 0), 'No es positivo'
+    lista = [True for i in range(0, n)]
+    j = 2
+    for i in range(2,n, 1):
+        while(i * j < n):
+            lista[i*j] = False
+            j += 1
+        j = 2
+    for j in range(2, n, 1):
+        if lista[j]:
+            print(j)
+def Ej230():
+    cadena = input("Introduce una cadena: ")
+    cadena = cadena.replace('.', '')
+    cadena = cadena.split(" ")
+    minusculas = list(set([word for word in cadena if word[0].islower()]))
+    print(minusculas)
+#Ej236 porque se sale despues de la primera 
+#Ej237 comprueba si una letra es minuscula
+#Ej238 lo mismo que el anterior
+#Ej242 imprime unodostres
+def Ej243():
+    cadena = "cadena      con       espacios     "
+    nueva = " ".join(cadena.split())
+    print(nueva)
+def Ej244():
+    matrix = np.zeros((5, 5))
+    print(matrix)
+def Ej245():
+    matrix = np.zeros((4, 4))
+    for i in range(0, 4):
+        matrix[i][i] = 1
+    print(matrix)
+def Ej250():
+    n = 3
+    A = np.zeros((n, n))
+    B = np.zeros((n, n))
+    for i in range(0, n):
+        for j in range(0, n):
+            A[i][j] = rand.randint(0, 10)
+            B[i][j] = rand.randint(0, 10)
+    print(A)
+    print(B)
+    result = A-B
+    print(result)
+def Ej252():
+    f = 3
+    c = 2
+    a = np.zeros((f, c))
+    for i in range(0, f):
+        for j in range(0, c):
+            a[i][j] = rand.randint(0, 10)
+    for i in range(0, c):
+        for j in range(0, f):
+            print(a[j][i], end=" ")
+        print()
+    print(a)
+def Ej255():
+    matriz = [[1,2,3],[4,5,6],[7,8,9]]
+    f = 3
+    c = 3
+    suma = 0
+    aux = 0
+    cont  = 0
+    for fila in matriz:
+        suma = sum(fila)
+        for j in range(0, c):
+            for i in range(0, f):
+                aux += matriz[i][j]
+            if aux == suma:
+                cont += 1
+            aux = 0
+    if cont == f:
+        print("Matriz prima")
+def Ej260():
+    rule = int(input("RULE: "))
+    bits = []
+    def to_binary(number : int):
+        for i in range(0, 8):
+            bit = number & (0x1 << (7-i))
+            if bit != 0:
+                bits.append(1)
+            else:
+                bits.append(0)
+    to_binary(rule)
+    states = {'111' : bits[0], '110': bits[1], '101': bits[2], '100': bits[3], '011': bits[4], '010': bits[5],
+              '001': bits[6], '000': bits[7]}
+    gen = ""
+    for i in range(0, 100):
+        gen += str(rand.randint(0, 1))
+    copy = gen[:]
+    generations = 0
+    while generations < 60:
+        print(gen)
+        for i in range(1, len(gen)-1):
+            result = states[gen[i-1:i+2]]
+            aux = list(copy)
+            aux[i] = str(result)
+            copy = "".join(aux)
+        gen = copy[:]
+        generations += 1 
 if __name__ == "__main__":
     Ej1()
     Ej2()
@@ -1001,4 +1260,26 @@ if __name__ == "__main__":
     #Ej175()
     #Ej176()
     #Ej178()
-    Ej179()          
+    #Ej179()
+    #Ej187()
+    #Ej188()
+    #Ej190()
+    #Ej191()
+    #Ej194()
+    #Ej195()
+    #Ej197()
+    #Ej201()
+    #Ej204()
+    #Ej205()
+    #Ej207()
+    #Ej209()
+    #Ej224()
+    Ej226()      
+    #Ej229()
+    #Ej230()
+    #Ej243()
+    #Ej244()
+    #Ej245()
+    #Ej250()
+    Ej252()
+    Ej260()
