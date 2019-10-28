@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <stdbool.h>
 #include <SFML/Graphics.h>
 static const uint n = 60;
 void drawRects(sfRenderWindow *window, sfRectangleShape **rects){
