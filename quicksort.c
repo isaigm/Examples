@@ -78,7 +78,6 @@ int main()
     }
     sfRenderWindow *window = sfRenderWindow_create(videomode, "Quicksort", sfDefaultStyle, NULL);
     sfEvent event;
-    bool run = true;
     sfVector2i pos;
     pos.x = (sfVideoMode_getDesktopMode().width-1280)/2;
     pos.y = (sfVideoMode_getDesktopMode().height-720)/2;
@@ -90,13 +89,11 @@ int main()
     double t = 0.0;
     t += (double) (final-inicio) / CLOCKS_PER_SEC;
     printf("Tiempo tardado en segundos -> %.6f\n", t);
-    while (run) {
-        while (sfRenderWindow_pollEvent(window, &event) == sfTrue) {
+    while (sfRenderWindow_isOpen(window)) {
+        while (sfRenderWindow_pollEvent(window, &event)) {
             switch (event.type) {
                 case sfEvtClosed:
                     sfRenderWindow_close(window);
-                    sfRenderWindow_destroy(window);
-                    run = false;
                     break;
                 default:
                     break;
@@ -104,10 +101,10 @@ int main()
         }
         draw(window, rects);
     }
+    sfRenderWindow_destroy(window);
     for(uint i = 0; i < n; i++){
         free(rects[i]);
     }
     free(rects);
     return 0;
 }
-
