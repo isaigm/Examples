@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/time.h>
 #include <SFML/Graphics.h>
-static const uint n = 60;
+static const uint n = 230;
 void drawRects(sfRenderWindow *window, sfRectangleShape **rects){
     for (uint i = 0; i < n; i++) {
         sfRenderWindow_drawRectangleShape(window, rects[i], NULL);
@@ -42,7 +43,6 @@ int particion(sfRenderWindow *window, sfRectangleShape **rects, int inicio, int 
             j--;
         }
     }
-
 }
 void qsortt(sfRenderWindow *window, sfRectangleShape **rects, int inicio, int final){
     if(inicio < final){
@@ -63,11 +63,13 @@ int main()
     sfVideoMode videomode;
     videomode.width = 1280;
     videomode.height = 720;
+    struct timeval inicio, final;
+    gettimeofday(&inicio, NULL);
     for(uint i = 0; i < n; i++){
         rects[i] = sfRectangleShape_create();
         sfVector2f pos;
         sfVector2f size;
-        size.x = 15;
+        size.x = 5;
         size.y = rand() % 720;
         pos.x = i * (size.x + 0.5f);
         pos.y = 720 - size.y;
@@ -82,12 +84,10 @@ int main()
     pos.y = (sfVideoMode_getDesktopMode().height-720)/2;
     sfRenderWindow_setPosition(window, pos);
     sfRenderWindow_setFramerateLimit(window, 60);
-    clock_t inicio = clock();
     quicksort(window, rects, n);
-    clock_t final = clock();
-    double t = 0.0;
-    t += (double) (final-inicio) / CLOCKS_PER_SEC;
-    printf("Tiempo tardado en segundos -> %.6f\n", t);
+    gettimeofday(&final, NULL);
+    long t = final.tv_sec - inicio.tv_sec;
+    printf("Tiempo tardado en segundos -> %ld\n", t);
     while (sfRenderWindow_isOpen(window)) {
         while (sfRenderWindow_pollEvent(window, &event)) {
             switch (event.type) {
@@ -102,8 +102,9 @@ int main()
     }
     sfRenderWindow_destroy(window);
     for(uint i = 0; i < n; i++){
-        free(rects[i]);
+        sfRectangleShape_destroy(rects[i]);
     }
     free(rects);
+    printf("-Completado-\n");
     return 0;
 }
