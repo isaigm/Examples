@@ -1,6 +1,15 @@
 module Stuff where
 import Data.Bits
 import Data.Foldable
+data Point = Point Float Float deriving (Show, Eq)
+
+len :: Point -> Float
+len (Point x y) = sqrt $ x^2 + y^2
+
+add :: Point -> Point -> Point
+add (Point x1 y1) (Point x2 y2) = Point (x1+y1) (y1+y2)
+
+
 quicksort :: [Int] -> [Int]
 quicksort [] = []
 quicksort (x:xs) = [y | y <- xs, y < x] ++ [x] ++ [z | z <- xs, z >= x]
@@ -25,7 +34,7 @@ getNumAt xs k = xs !! k
 
 myLength :: [a] -> Int
 myLength [] = 0
-myLength (x:xs) = 1 + myLength xs 
+myLength (x:xs) = 1 + myLength xs
 
 myReverse :: [a] -> [a]
 myReverse [] = []
@@ -48,14 +57,26 @@ collatz :: Int -> [Int]
 collatz 1 = [1]
 collatz n
     | mod n 2 == 0 = n:collatz (div n 2)
-    | otherwise = n:collatz (3*n + 1)
+    | otherwise = n:collatz (3 * n + 1)
 
 numLongChains :: Int
 numLongChains = length (filter isLong (map collatz [1..100]))
     where isLong xs = length xs > 15
 
 plus :: Int -> Int
-plus x = let plusOne y = y + 1 
+plus x = let plusOne y = y + 1
                      in plusOne x
 xorForList :: [Int] -> Int
 xorForList = foldl xor 0
+
+rev :: [a] -> [a]
+rev [] = []
+rev [x] = [x]
+rev (x:xs) = rev xs ++ [x]
+
+length2 :: [a] -> Int
+length2 = foldl (\acc _ -> 1 + acc) 0
+
+isPrime :: Integral a => a -> Bool
+isPrime x = all (\y -> x `mod` y /= 0) s
+    where s = takeWhile (\z -> z <= (floor $ sqrt $ fromIntegral x)) [2..]
