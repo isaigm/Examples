@@ -112,79 +112,87 @@ int main()
         for (;;)
         {
             draw_map();
-            attron(COLOR_PAIR(2));
-            mvaddch(pos.y, pos.x, '@');
-            attroff(COLOR_PAIR(2));
-            mvaddch(1, 123, (int) curr_dir + '0');
-            refresh();
-            right = next_dir(curr_dir);
-            switch (right)
+            if (pos.y < M_ROWS && pos.x < M_COLS)
             {
-            case WEST:
-                ch = map[pos.y][pos.x - 1];
-                break;
-            case EAST:
-                ch = map[pos.y][pos.x + 1];
-                break;
-            case SOUTH:
-                ch = map[pos.y + 1][pos.x];
-                break;
-            case NORTH:
-                ch = map[pos.y - 1][pos.x];
-                break;
-            }
-            if (ch == ' ')
-            {
-                curr_dir = right;
-            }
-            else if (is_colliding)
-            {
-                curr_dir = aux;
-                is_colliding = FALSE;
-            }
-            switch (curr_dir)
-            {
-            case WEST:
-                if (map[pos.y][pos.x - 1] == '#')
+                attron(COLOR_PAIR(2));
+                mvaddch(pos.y, pos.x, '@');
+                attroff(COLOR_PAIR(2));
+                mvaddch(1, 123, (int) curr_dir + '0');
+                refresh();
+                right = next_dir(curr_dir);
+                switch (right)
                 {
-                    is_colliding = TRUE;
-                    aux = SOUTH;
+                case WEST:
+                    ch = map[pos.y][pos.x - 1];
+                    break;
+                case EAST:
+                    ch = map[pos.y][pos.x + 1];
+                    break;
+                case SOUTH:
+                    ch = map[pos.y + 1][pos.x];
+                    break;
+                case NORTH:
+                    ch = map[pos.y - 1][pos.x];
+                    break;
                 }
-                else
-                    pos.x -= 1;
-                break;
-            case EAST:
-                if (map[pos.y][pos.x + 1] == '#')
+                if (ch == ' ')
                 {
-                    is_colliding = TRUE;
-                    aux = NORTH;
+                    curr_dir = right;
                 }
-                else
-                    pos.x += 1;
-                break;
-            case SOUTH:
-                if (map[pos.y + 1][pos.x] == '#')
+                else if (is_colliding)
                 {
-                    is_colliding = TRUE;
-                    aux = EAST;
+                    curr_dir = aux;
+                    is_colliding = FALSE;
                 }
-                else
-                    pos.y += 1;
-                break;
-            case NORTH:
-                if (map[pos.y - 1][pos.x] == '#')
+                switch (curr_dir)
                 {
-                    is_colliding = TRUE;
-                    aux = WEST;
+                case WEST:
+                    if (map[pos.y][pos.x - 1] == '#')
+                    {
+                        is_colliding = TRUE;
+                        aux = SOUTH;
+                    }
+                    else
+                        pos.x -= 1;
+                    break;
+                case EAST:
+                    if (map[pos.y][pos.x + 1] == '#')
+                    {
+                        is_colliding = TRUE;
+                        aux = NORTH;
+                    }
+                    else
+                        pos.x += 1;
+                    break;
+                case SOUTH:
+                    if (map[pos.y + 1][pos.x] == '#')
+                    {
+                        is_colliding = TRUE;
+                        aux = EAST;
+                    }
+                    else
+                        pos.y += 1;
+                    break;
+                case NORTH:
+                    if (map[pos.y - 1][pos.x] == '#')
+                    {
+                        is_colliding = TRUE;
+                        aux = WEST;
+                    }
+                    else
+                        pos.y -= 1;
+                    break;
                 }
-                else
-                    pos.y -= 1;
-                break;
+                clear();
+                msleep(65);
+            }else{
+                mvaddstr(1, 123, "Solved");
+                refresh();
+                if(getch() == 'q'){
+                    break;
+                }
             }
-            clear();
-            msleep(70);
         }
-        getch();
         endwin();
     }
     else
