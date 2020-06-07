@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <ncurses.h>
+#include <chrono>
 #define M_ROWS 41
 #define M_COLS 121
 struct Node
@@ -27,6 +28,7 @@ struct Tile
 };
 
 static Tile map[M_ROWS][M_COLS];
+static double elapsed_time = 0.0;
 int msleep(long msec)
 {
     struct timespec ts;
@@ -121,7 +123,7 @@ void traverse(Node *node)
         draw_map();
         attron(COLOR_PAIR(2));
         map[node->y][node->x].e = '.';
-        mvaddch(node->y, node->x, '@');
+        mvaddch(node->y, node->x, '+');
         attroff(COLOR_PAIR(2));
         refresh();
         msleep(16);
@@ -129,15 +131,19 @@ void traverse(Node *node)
 }
 void dfs()
 {
+    auto start = std::chrono::steady_clock::now();
     std::stack<Node *> open_list;
-    open_list.push(new Node(30, 1));
+    auto start_pos = std::make_pair(1, 39);
+    auto goal_pos = std::make_pair(71, 1);
+    open_list.push(new Node(start_pos.first, start_pos.second));
     Node *sol = nullptr;
     bool found = false;
     while (!open_list.empty())
     {
+
         auto curr = open_list.top();
         open_list.pop();
-        if (curr->y == 40 && curr->x == 119)
+        if (curr->y == goal_pos.second && curr->x == goal_pos.first)
         {
             found = true;
             break;
@@ -149,7 +155,7 @@ void dfs()
             auto child = neighbours[i];
             if (!map[child->y][child->x].visited)
             {
-                if (child->y == 40 && child->x == 119)
+                if (child->y == goal_pos.second && child->x == goal_pos.first)
                 {
                     sol = child;
                     found = true;
@@ -160,8 +166,12 @@ void dfs()
             }
         }
     }
+    auto end =  std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now() - start);
+    elapsed_time = end.count();
     if (found)
         traverse(sol);
+
 }
 int main()
 {
@@ -174,9 +184,12 @@ int main()
         nodelay(stdscr, true);
         init_pair(1, COLOR_YELLOW, COLOR_BLACK);
         init_pair(2, COLOR_BLUE, COLOR_BLACK);
-        init_pair(3, COLOR_MAGENTA, COLOR_BLACK);
+        init_color(10, 1000, 0, 0);
+        init_pair(3, COLOR_RED, COLOR_BLACK);
         curs_set(false);
         dfs();
+        mvprintw(1, 122, "Elapsed time in nanoseconds: %f", elapsed_time);
+        refresh();
         getchar();
         endwin();
     }
