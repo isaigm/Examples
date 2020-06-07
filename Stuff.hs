@@ -80,3 +80,15 @@ length2 = foldl (\acc _ -> 1 + acc) 0
 isPrime :: Integral a => a -> Bool
 isPrime x = all (\y -> x `mod` y /= 0) s
     where s = takeWhile (\z -> z <= (floor $ sqrt $ fromIntegral x)) [2..]
+
+factors :: Integral a => [a] ->  a -> [a]
+factors _ 1 = []
+factors [] _ = []
+factors (x:xs) y
+    | mod y x == 0 = x:factors(x:xs) (div y x)
+    | otherwise = factors xs y 
+
+getFactorsOf :: Integral a =>  a -> [a]
+getFactorsOf = factors primes
+    where primes = filter isPrime [2..10000]
+     
