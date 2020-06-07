@@ -152,7 +152,7 @@ void dfs()
                 if (child->y == 40 && child->x == 119)
                 {
                     sol = child;
-                    found = false;
+                    found = true;
                     break;
                 }
                 else
