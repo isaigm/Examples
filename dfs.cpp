@@ -140,7 +140,6 @@ void dfs()
     bool found = false;
     while (!open_list.empty())
     {
-
         auto curr = open_list.top();
         open_list.pop();
         if (curr->y == goal_pos.second && curr->x == goal_pos.first)
