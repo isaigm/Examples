@@ -75,11 +75,14 @@ void draw_map()
         for (int j = 0; j < M_COLS; j++)
         {
             auto e = map[i][j].e;
-            if(e == '#'){
+            if (e == '#')
+            {
                 attron(COLOR_PAIR(1));
                 mvaddch(i, j, e);
                 attroff(COLOR_PAIR(1));
-            }else{
+            }
+            else
+            {
                 attron(COLOR_PAIR(3));
                 mvaddch(i, j, e);
                 attroff(COLOR_PAIR(3));
@@ -109,8 +112,10 @@ std::vector<Node *> getNeighbours(Node *node)
     }
     return neighbours;
 }
-void traverse(Node *node){
-    if(node != nullptr){
+void traverse(Node *node)
+{
+    if (node != nullptr)
+    {
         traverse(node->root);
         clear();
         draw_map();
@@ -155,7 +160,8 @@ void dfs()
             }
         }
     }
-    traverse(sol);
+    if (found)
+        traverse(sol);
 }
 int main()
 {
