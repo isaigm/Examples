@@ -45,7 +45,6 @@ void helper(const std::string &program, std::map<int, int> &brackets, size_t &i)
 }
 void interpreter(const std::string &program, std::map<int, int> &brackets, size_t &i)
 {
-
     while (i < program.size())
     {
         decode(program, i);
@@ -56,7 +55,6 @@ void interpreter(const std::string &program, std::map<int, int> &brackets, size_
     }
 }
 int find_closing_bracket(const std::string &program, int pos){
-
      int depth = 1;
      for (int i = pos + 1; i < int(program.length()); i++) {
          switch (program[i]) {
