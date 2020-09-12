@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <queue>
 int count_digits(int k)
 {
     int c = 0;
@@ -12,8 +13,8 @@ int count_digits(int k)
 }
 int main()
 {
-    std::vector<int> nums{123, 2, 3, 444, 1, 21, 20, 23, 11, 33, 32, 0};
-    std::vector<std::vector<int>> ld(10);
+    std::vector<int> nums{123, 2, 3, 444, 1, 21, 20, 23, 11, 33, 3};
+    std::vector<std::queue<int>> ld(10);
     int max_digits = 0;
     for (size_t i = 0; i < nums.size(); i++)
     {
@@ -24,7 +25,7 @@ int main()
     {
         while (nums.size() > 0)
         {
-            ld[(nums.front() / d) % 10].push_back(nums.front());
+            ld[(nums.front() / d) % 10].push(nums.front());
             nums.erase(nums.begin());
         }
         d *= 10;
@@ -33,14 +34,13 @@ int main()
             while (ld[j].size() > 0)
             {
                 nums.push_back(ld[j].front());
-                ld[j].erase(ld[j].begin());
+                ld[j].pop();
             }
-            
         }
     }
-    for(const auto &it: nums){
-        std::cout << it << " ";
+    for (const auto &it : nums)
+    {
+        std::cout << it << " " << std::endl;
     }
-    std::cout << std::endl;
     return 0;
 }
