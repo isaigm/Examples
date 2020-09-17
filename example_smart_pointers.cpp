@@ -152,13 +152,8 @@ void a_star(CellType **map, int start_x, int start_y)
         std::cout << "unreachable target\n";
     }
 }
-int main()
+void reset_map(CellType **map)
 {
-    CellType **map = new CellType *[ROWS];
-    for (int i = 0; i < ROWS; i++)
-    {
-        map[i] = new CellType[COLS];
-    }
     for (int i = 0; i < ROWS; i++)
     {
         for (int j = 0; j < COLS; j++)
@@ -166,6 +161,15 @@ int main()
             map[i][j] = CellType::EMPTY;
         }
     }
+}
+int main()
+{
+    CellType **map = new CellType *[ROWS];
+    for (int i = 0; i < ROWS; i++)
+    {
+        map[i] = new CellType[COLS];
+    }
+    reset_map(map);
     sf::RenderWindow window(sf::VideoMode(800, 600), "A*");
     sf::Event ev;
     window.setVerticalSyncEnabled(true);
@@ -227,13 +231,7 @@ int main()
                 }
                 else if (ev.key.code == sf::Keyboard::R)
                 {
-                    for (int i = 0; i < ROWS; i++)
-                    {
-                        for (int j = 0; j < COLS; j++)
-                        {
-                            map[i][j] = CellType::EMPTY;
-                        }
-                    }
+                    reset_map(map);
                     new_path = true;
                 }
                 break;
