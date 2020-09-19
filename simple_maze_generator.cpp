@@ -104,6 +104,7 @@ int main()
     dfs(rects, visited, 0, 0);
     sf::RenderWindow window(sf::VideoMode(800, 600), "Maze generator");
     sf::Event ev;
+    window.setVerticalSyncEnabled(true);
     while (window.isOpen())
     {
         while (window.pollEvent(ev))
