@@ -5,8 +5,10 @@
 
 void draw_state(uint8_t cells[ROWS][COLS], sf::RenderTarget &window, sf::Uint8 *pixels, sf::Texture &texture, sf::Sprite &sprite)
 {
-	for (int i = 0; i < ROWS; i++) {
-		for (int j = 0; j < COLS; j++) {
+	for (int i = 0; i < ROWS; i++)
+	{
+		for (int j = 0; j < COLS; j++)
+		{
 			switch (cells[i][j])
 			{
 			case 0:
@@ -37,18 +39,20 @@ void draw_state(uint8_t cells[ROWS][COLS], sf::RenderTarget &window, sf::Uint8 *
 }
 void step(uint8_t cells[ROWS][COLS], uint8_t copy[ROWS][COLS])
 {
-	auto get_alive_neighbours = [cells](int i, int j)
-	{
+	auto get_alive_neighbours = [cells](int i, int j) {
 		int total = 0;
-		for (int i1 = i - 1; i1 <= i + 1; i1++) {
+		for (int i1 = i - 1; i1 <= i + 1; i1++)
+		{
 			for (int j1 = j - 1; j1 <= j + 1; j1++)
 			{
-				if (i1 == i && j1 == j) {
+				if (i1 == i && j1 == j)
+				{
 					continue;
 				}
 				int i2 = i1 % ROWS;
 				int j2 = j1 % COLS;
-				if (cells[i2][j2] == 2) total++;
+				if (cells[i2][j2] == 2)
+					total++;
 			}
 		}
 		return total;
@@ -60,7 +64,8 @@ void step(uint8_t cells[ROWS][COLS], uint8_t copy[ROWS][COLS])
 			switch (cells[i][j])
 			{
 			case 0:
-				if (get_alive_neighbours(i, j) == 2) {
+				if (get_alive_neighbours(i, j) == 2)
+				{
 					copy[i][j] = 2;
 				}
 				break;
@@ -77,7 +82,8 @@ void step(uint8_t cells[ROWS][COLS], uint8_t copy[ROWS][COLS])
 	}
 	for (int i = 0; i < ROWS; i++)
 	{
-		for (int j = 0; j < COLS; j++) {
+		for (int j = 0; j < COLS; j++)
+		{
 			cells[i][j] = copy[i][j];
 		}
 	}
@@ -96,15 +102,17 @@ int main()
 	sprite.setScale(5, 5);
 	sprite.setTexture(texture);
 	window.setVerticalSyncEnabled(true);
-	for(int i = 0; i < ROWS; i++){
-		for(int j = 0; j < COLS; j++){
+	for (int i = 0; i < ROWS; i++)
+	{
+		for (int j = 0; j < COLS; j++)
+		{
 			cells[i][j] = rand() % 3;
 			copy[i][j] = cells[i][j];
 		}
 	}
 	while (window.isOpen())
 	{
-		while(window.pollEvent(ev))
+		while (window.pollEvent(ev))
 		{
 			if (ev.type == sf::Event::Closed)
 			{
@@ -116,6 +124,5 @@ int main()
 		draw_state(cells, window, pixels, texture, sprite);
 		window.display();
 	}
-	delete [] pixels;
 	return 0;
 }
