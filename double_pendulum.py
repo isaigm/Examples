@@ -31,18 +31,18 @@ while True:
         if e.type == QUIT:
             py.quit()
             sys.exit()
-    n1 = -g*(2*m1+m2)*sin(t1)
-    n2 = -m2*g*sin(t1-2*t2)
-    n3 = -2*sin(t1-t2)*m2*(o2**2*l2+o1**2*l1*cos(t1-t2))
-    d = 2*m1+m2-m2*cos(2*t1-2*t2)
+    n1 = -g * (2*m1 + m2) * sin(t1)
+    n2 = -m2 * g * sin(t1 - 2*t2)
+    n3 = -2*sin(t1-t2) * m2 * (o2**2 * l2 + o1**2 * l1 * cos(t1-t2))
+    d = 2*m1 + m2 - m2 * cos(2*t1 - 2*t2)
     oo1 = o1
-    o1 = o1 + dt*(n1+n2+n3)/(l1*d)
+    o1 = o1 + dt*(n1 + n2 + n3) / (l1 * d)
 
     n1 = 2*sin(t1-t2)
-    n2 = oo1**2*l1*(m1+m2)+g*(m1+m2)*cos(t1)
-    n3 = o2**2*l2*m2*cos(t1-t2)
+    n2 = oo1**2 * l1 * (m1 + m2) + g*(m1 + m2) * cos(t1)
+    n3 = o2**2 * l2 * m2 * cos(t1-t2)
 
-    o2 = o2 + dt*n1*(n2+n3)/(l2*d)
+    o2 = o2 + dt * n1 * (n2 + n3) / (l2 * d)
     t1 = t1 + dt * o1
     t2 = t2 + dt * o2
     x1 = round(l1 * sin(t1))
