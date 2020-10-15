@@ -1,7 +1,8 @@
 from selenium import webdriver
 import time
+import random
 
-email = "email@gmail"
+email = "email@gmail.com"
 passwd = "strongest_password"
 
 
@@ -19,11 +20,12 @@ def do_spam(times: int, nvideos: int, msg: str, start_url: str):
     passwd_.send_keys(passwd)
     driver.find_element_by_class_name("VfPpkd-RLmnJb").click()
     driver.get(start_url)
+    time.sleep(2)
     for _ in range(nvideos):
         time.sleep(2)
         driver.execute_script("window.scrollTo(0, 500);")
         for _ in range(times):
-            time.sleep(2)
+            time.sleep(1)
             comment_box = driver.find_element_by_id('placeholder-area')
             comment_box.click()
             input_box = driver.find_element_by_id('contenteditable-root')
@@ -31,9 +33,11 @@ def do_spam(times: int, nvideos: int, msg: str, start_url: str):
             driver.find_element_by_xpath(
                 "//paper-button[@class='style-scope ytd-button-renderer style-primary size-default']").click()
         time.sleep(1)
-        driver.execute_script("window.scrollTo(0, 100);")
-        elem = driver.find_element_by_xpath('//*[@class="ytp-next-button ytp-button"]')
-        elem.click()
+        videos = driver.find_elements_by_xpath(
+            '//*[@class="yt-simple-endpoint style-scope ytd-compact-video-renderer"]')
+        random_video = random.choice(videos)
+        driver.get(random_video.get_attribute("href"))
 
 
-do_spam(1, 10, "s", "https://www.youtube.com/watch?v=vT0E2SGJUag")
+# Example
+do_spam(2, 3, "Nice video, +1 sub", "https://www.youtube.com/watch?v=v3fQqjqYPJA&ab_channel=Methalodon")
