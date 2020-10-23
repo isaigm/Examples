@@ -64,8 +64,8 @@ struct snake_t* create_snake(int x, int y, enum Dir dir) {
     snake->last = snake->head;
     return snake;
 }
-void append(struct snake_t* snake, int x, int y, enum Dir dir) {
-    struct tail_t* sgt = create_segment(x, y, dir);
+void append(struct snake_t* snake, int x, int y) {
+    struct tail_t* sgt = create_segment(x, y, snake->last->dir);
     snake->last->next = sgt;
     snake->last = sgt;
 }
@@ -123,7 +123,7 @@ void draw_snake(SDL_Renderer* renderer, struct snake_t* snake) {
         SDL_RenderFillRect(renderer, &rect);
     }
 }
-void find_pos(struct snake_t *snake, int* x, int* y, enum Dir *dir) {
+void find_pos(struct snake_t *snake, int* x, int* y) {
     switch (snake->last->dir)
     {
     case LEFT:
@@ -170,8 +170,8 @@ void restart(struct snake_t* snake) {
     snake->head->y = 20;
     snake->head->dir = RIGHT;
     snake->last = snake->head;
-    append(snake, 40, 20, RIGHT);
-    append(snake, 20, 20, RIGHT);
+    append(snake, 40, 20);
+    append(snake, 20, 20);
 }
 int main()
 {
@@ -251,8 +251,8 @@ int main()
             else if (try_collide_with(snake, food_rect.x, food_rect.y)) {
                 enum Dir dir;
                 int x, y;
-                find_pos(snake, &x, &y, &dir);
-                append(snake, x, y, dir);
+                find_pos(snake, &x, &y);
+                append(snake, x, y);
                 spawn_food(&food_rect.x, &food_rect.y);
                 score++;
             }
