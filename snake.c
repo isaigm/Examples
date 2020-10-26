@@ -3,6 +3,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <SDL_ttf.h>
 #define WIDTH 800
 #define HEIGHT 600
 #define SEGMENT_SIZE 20
@@ -70,8 +71,8 @@ void append(struct snake_t* snake, int x, int y) {
     snake->last = sgt;
 }
 void spawn_food(int *x, int *y) {
-    *x = (rand() % (WIDTH / SEGMENT_SIZE)) * SEGMENT_SIZE;
-    *y = (rand() % (HEIGHT / SEGMENT_SIZE)) * SEGMENT_SIZE;
+    *x = (rand() % (WIDTH/SEGMENT_SIZE - 2) + 1)  * SEGMENT_SIZE;
+    *y = (rand() % (HEIGHT/SEGMENT_SIZE - 2) + 1) * SEGMENT_SIZE;
 }
 void update_pos(struct snake_t* snake, enum Dir curr_dir) {
     int prev_x, prev_y;
@@ -124,22 +125,20 @@ void draw_snake(SDL_Renderer* renderer, struct snake_t* snake) {
     }
 }
 void find_pos(struct snake_t *snake, int* x, int* y) {
+    *x = snake->last->x;
+    *y = snake->last->y;
     switch (snake->last->dir)
     {
     case LEFT:
         *x = snake->last->x + SEGMENT_SIZE;
-        *y = snake->last->y;
         break;
     case RIGHT:
         *x = snake->last->x - SEGMENT_SIZE;
-        *y = snake->last->y;
         break;
     case UP:
-        *x = snake->last->x;
         *y = snake->last->y + SEGMENT_SIZE;
         break;
     case DOWN:
-        *x = snake->last->x;
         *y = snake->last->y - SEGMENT_SIZE;
         break;
     default:
@@ -173,6 +172,38 @@ void restart(struct snake_t* snake) {
     append(snake, 40, 20);
     append(snake, 20, 20);
 }
+SDL_Rect update_score(SDL_Renderer *renderer, TTF_Font *font, SDL_Texture** texture, SDL_Surface **surface, int score) {
+    char buffer[256];
+    SDL_Color color = { 255, 255, 255 };
+    sprintf_s(buffer, sizeof(buffer), "Score: %d", score);
+    *surface = TTF_RenderText_Solid(font, buffer, color);
+    *texture = SDL_CreateTextureFromSurface(renderer, *surface);
+    int textW = 0;
+    int textH = 0;
+    SDL_QueryTexture(*texture, NULL, NULL, &textW, &textH);
+    SDL_Rect dstrect = {WIDTH - textW - 30, 0, textW, textH};
+    return dstrect;
+}
+void destroy_text(SDL_Texture *texture, SDL_Surface *surface) {
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(surface);
+}
+void try_spawn_food(struct snake_t* snake, int *x, int *y) {
+    bool valid_pos;
+    struct tail_t* ptr = snake->head;
+    do {
+        valid_pos = true;
+        spawn_food(x, y);
+        while (ptr != NULL) {
+            if (ptr->x == *x && ptr->y == *y) {
+                valid_pos = false;
+                ptr = snake->head;
+                break;
+            }
+            ptr = ptr->next;
+        }
+    } while (!valid_pos);
+}
 int main()
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -180,6 +211,7 @@ int main()
         printf("cannot initialize SDL\n");
         exit(1);
     }
+    TTF_Init();
     srand(time(NULL));
     int score = 0;
     bool you_lose = false;
@@ -191,8 +223,13 @@ int main()
     append(snake, 20, 20, RIGHT);
     window = SDL_CreateWindow("Snake", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    TTF_Font* font = TTF_OpenFont("C:\\Users\\isaig\\Desktop\\arial.ttf", 25);
+    SDL_Color color = { 255, 255, 255 };
+    SDL_Surface* surface = NULL;
+    SDL_Texture* texture = NULL;
     SDL_Rect food_rect;
-    spawn_food(&food_rect.x, &food_rect.y);
+    SDL_Rect dstrect = update_score(renderer, font, &texture, &surface, score);
+    try_spawn_food(snake, &food_rect.x, &food_rect.y);
     food_rect.h = SEGMENT_SIZE;
     food_rect.w = SEGMENT_SIZE;
     while (run) {
@@ -229,7 +266,7 @@ int main()
                 case SDLK_r:
                     if (you_lose) {
                         restart(snake);
-                        spawn_food(&food_rect.x, &food_rect.y);
+                        try_spawn_food(snake, &food_rect.x, &food_rect.y);
                         curr_dir = snake->head->dir;
                         score = 0;
                         you_lose = false;
@@ -247,14 +284,17 @@ int main()
                 you_lose = true;
                 printf("you lose\n");
                 printf("score: %d\n", score);
+                destroy_text(texture, surface);
+                dstrect = update_score(renderer, font, &texture, &surface, 0);
             }
             else if (try_collide_with(snake, food_rect.x, food_rect.y)) {
-                enum Dir dir;
                 int x, y;
                 find_pos(snake, &x, &y);
                 append(snake, x, y);
-                spawn_food(&food_rect.x, &food_rect.y);
+                try_spawn_food(snake, &food_rect.x, &food_rect.y);
                 score++;
+                destroy_text(texture, surface);
+                dstrect = update_score(renderer, font, &texture, &surface, score);
             }
         }
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -262,11 +302,15 @@ int main()
         draw_snake(renderer, snake);
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
         SDL_RenderFillRect(renderer, &food_rect);
+        SDL_RenderCopy(renderer, texture, NULL, &dstrect);
         SDL_RenderPresent(renderer);
-        SDL_Delay(50);
+        SDL_Delay(40);
     }
+    destroy_text(texture, surface);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    TTF_CloseFont(font);
+    TTF_Quit();
     SDL_Quit();
     return 0;
 }
