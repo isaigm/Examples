@@ -43,7 +43,6 @@ enum Dir {
 };
 struct tail_t
 {
-    enum Dir dir;
     int x, y;
     struct tail_t* next;
 };
@@ -51,22 +50,21 @@ struct snake_t {
     struct tail_t* last;
     struct tail_t* head;
 };
-struct tail_t* create_segment(int x_, int y_, enum Dir dir) {
+struct tail_t* create_segment(int x_, int y_) {
     struct tail_t* sgt = (struct tail_t*)malloc(sizeof(struct tail_t));
-    sgt->dir = dir;
     sgt->x = x_;
     sgt->y = y_;
     sgt->next = NULL;
     return sgt;
 }
-struct snake_t* create_snake(int x, int y, enum Dir dir) {
+struct snake_t* create_snake(int x, int y) {
     struct snake_t* snake = (struct snake_t*)malloc(sizeof(struct snake_t));
-    snake->head = create_segment(x, y, dir);
+    snake->head = create_segment(x, y);
     snake->last = snake->head;
     return snake;
 }
 void append(struct snake_t* snake, int x, int y) {
-    struct tail_t* sgt = create_segment(x, y, snake->last->dir);
+    struct tail_t* sgt = create_segment(x, y);
     snake->last->next = sgt;
     snake->last = sgt;
 }
@@ -76,7 +74,6 @@ void spawn_food(int *x, int *y) {
 }
 void update_pos(struct snake_t* snake, enum Dir curr_dir) {
     int prev_x, prev_y;
-    enum Dir prev_dir = curr_dir;
     prev_x = snake->head->x;
     prev_y = snake->head->y;
     switch (curr_dir)
@@ -101,13 +98,10 @@ void update_pos(struct snake_t* snake, enum Dir curr_dir) {
     {
         int tx = ptr->x;
         int ty = ptr->y;
-        int tdir = ptr->dir;
         ptr->x = prev_x;
         ptr->y = prev_y;
-        ptr->dir = prev_dir;
         prev_x = tx;
         prev_y = ty;
-        prev_dir = tdir;
         ptr = ptr->next;
     }
 }
@@ -122,27 +116,6 @@ void draw_snake(SDL_Renderer* renderer, struct snake_t* snake) {
         rect.h = SEGMENT_SIZE;
         ptr = ptr->next;
         SDL_RenderFillRect(renderer, &rect);
-    }
-}
-void find_pos(struct snake_t *snake, int* x, int* y) {
-    *x = snake->last->x;
-    *y = snake->last->y;
-    switch (snake->last->dir)
-    {
-    case LEFT:
-        *x = snake->last->x + SEGMENT_SIZE;
-        break;
-    case RIGHT:
-        *x = snake->last->x - SEGMENT_SIZE;
-        break;
-    case UP:
-        *y = snake->last->y + SEGMENT_SIZE;
-        break;
-    case DOWN:
-        *y = snake->last->y - SEGMENT_SIZE;
-        break;
-    default:
-        break;
     }
 }
 bool try_collide_with(struct snake_t* snake, int x, int y) {
@@ -167,7 +140,6 @@ void restart(struct snake_t* snake) {
     }
     snake->head->x = 60;
     snake->head->y = 20;
-    snake->head->dir = RIGHT;
     snake->last = snake->head;
     append(snake, 40, 20);
     append(snake, 20, 20);
@@ -219,8 +191,8 @@ int main()
     enum Dir curr_dir = RIGHT;
     struct snake_t* snake = create_snake(60, 20, RIGHT);
     bool run = true;
-    append(snake, 40, 20, RIGHT);
-    append(snake, 20, 20, RIGHT);
+    append(snake, 40, 20);
+    append(snake, 20, 20);
     window = SDL_CreateWindow("Snake", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     TTF_Font* font = TTF_OpenFont("C:\\Users\\isaig\\Desktop\\arial.ttf", 25);
@@ -267,7 +239,7 @@ int main()
                     if (you_lose) {
                         restart(snake);
                         try_spawn_food(snake, &food_rect.x, &food_rect.y);
-                        curr_dir = snake->head->dir;
+                        curr_dir = RIGHT;
                         score = 0;
                         you_lose = false;
                         clear_console();
@@ -279,7 +251,6 @@ int main()
             }
         }
         if (!you_lose) {
-            update_pos(snake, curr_dir);
             if (check_collisions(snake) || snake->head->x < 0 || snake->head->x >= WIDTH || snake->head->y < 0 || snake->head->y >= HEIGHT) {
                 you_lose = true;
                 printf("you lose\n");
@@ -288,14 +259,13 @@ int main()
                 dstrect = update_score(renderer, font, &texture, &surface, 0);
             }
             else if (try_collide_with(snake, food_rect.x, food_rect.y)) {
-                int x, y;
-                find_pos(snake, &x, &y);
-                append(snake, x, y);
+                append(snake, snake->last->x, snake->last->y);
                 try_spawn_food(snake, &food_rect.x, &food_rect.y);
                 score++;
                 destroy_text(texture, surface);
                 dstrect = update_score(renderer, font, &texture, &surface, score);
             }
+            update_pos(snake, curr_dir);
         }
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
         SDL_RenderClear(renderer);
