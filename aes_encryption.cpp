@@ -1,6 +1,42 @@
-#include <stdio.h>
+#include <cstdio>
 #include <cstdint>
+#include <string.h>
+#include <vector>
+#include <iostream>
 
+static const uint8_t inv_sbox[256] = {
+    0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38,
+    0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
+    0x7C, 0xE3, 0x39, 0x82, 0x9B, 0x2F, 0xFF, 0x87,
+    0x34, 0x8E, 0x43, 0x44, 0xC4, 0xDE, 0xE9, 0xCB,
+    0x54, 0x7B, 0x94, 0x32, 0xA6, 0xC2, 0x23, 0x3D,
+    0xEE, 0x4C, 0x95, 0x0B, 0x42, 0xFA, 0xC3, 0x4E,
+    0x08, 0x2E, 0xA1, 0x66, 0x28, 0xD9, 0x24, 0xB2,
+    0x76, 0x5B, 0xA2, 0x49, 0x6D, 0x8B, 0xD1, 0x25,
+    0x72, 0xF8, 0xF6, 0x64, 0x86, 0x68, 0x98, 0x16,
+    0xD4, 0xA4, 0x5C, 0xCC, 0x5D, 0x65, 0xB6, 0x92,
+    0x6C, 0x70, 0x48, 0x50, 0xFD, 0xED, 0xB9, 0xDA,
+    0x5E, 0x15, 0x46, 0x57, 0xA7, 0x8D, 0x9D, 0x84,
+    0x90, 0xD8, 0xAB, 0x00, 0x8C, 0xBC, 0xD3, 0x0A,
+    0xF7, 0xE4, 0x58, 0x05, 0xB8, 0xB3, 0x45, 0x06,
+    0xD0, 0x2C, 0x1E, 0x8F, 0xCA, 0x3F, 0x0F, 0x02,
+    0xC1, 0xAF, 0xBD, 0x03, 0x01, 0x13, 0x8A, 0x6B,
+    0x3A, 0x91, 0x11, 0x41, 0x4F, 0x67, 0xDC, 0xEA,
+    0x97, 0xF2, 0xCF, 0xCE, 0xF0, 0xB4, 0xE6, 0x73,
+    0x96, 0xAC, 0x74, 0x22, 0xE7, 0xAD, 0x35, 0x85,
+    0xE2, 0xF9, 0x37, 0xE8, 0x1C, 0x75, 0xDF, 0x6E,
+    0x47, 0xF1, 0x1A, 0x71, 0x1D, 0x29, 0xC5, 0x89,
+    0x6F, 0xB7, 0x62, 0x0E, 0xAA, 0x18, 0xBE, 0x1B,
+    0xFC, 0x56, 0x3E, 0x4B, 0xC6, 0xD2, 0x79, 0x20,
+    0x9A, 0xDB, 0xC0, 0xFE, 0x78, 0xCD, 0x5A, 0xF4,
+    0x1F, 0xDD, 0xA8, 0x33, 0x88, 0x07, 0xC7, 0x31,
+    0xB1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xEC, 0x5F,
+    0x60, 0x51, 0x7F, 0xA9, 0x19, 0xB5, 0x4A, 0x0D,
+    0x2D, 0xE5, 0x7A, 0x9F, 0x93, 0xC9, 0x9C, 0xEF,
+    0xA0, 0xE0, 0x3B, 0x4D, 0xAE, 0x2A, 0xF5, 0xB0,
+    0xC8, 0xEB, 0xBB, 0x3C, 0x83, 0x53, 0x99, 0x61,
+    0x17, 0x2B, 0x04, 0x7E, 0xBA, 0x77, 0xD6, 0x26,
+    0xE1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0C, 0x7D};
 static const uint8_t sbox[256] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -23,58 +59,108 @@ static const uint8_t mds[4][4] = {
     {1, 2, 3, 1},
     {1, 1, 2, 3},
     {3, 1, 1, 2}};
+static const uint8_t inv_mds[4][4] = {
+    {14, 11, 13, 9},
+    {9, 14, 11, 13},
+    {13, 9, 14, 11},
+    {11, 13, 9, 14}};
 static const uint8_t rcon[4][10] = {
     {0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36},
     {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
     {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
     {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 };
+void copy(uint8_t dst[4][4], const uint8_t src[4][4])
+{
+    for (int i = 0; i < 4; i++)
+    {
+        memcpy(dst[i], src[i], sizeof(uint8_t) * 4);
+    }
+}
 uint8_t get_index(uint8_t r, uint8_t c)
 {
     return 16 * r + c;
+}
+void make_sub(uint8_t &byte, const uint8_t *box)
+{
+    uint8_t r = (byte >> 4) & 0xF;
+    uint8_t c = byte & 0xF;
+    byte = box[get_index(r, c)];
 }
 uint8_t gmul(uint8_t a, uint8_t b)
 {
     uint8_t p = 0; /* the product of the multiplication */
     while (a && b)
     {
-        if (b & 1)  /* if b is odd, then add the corresponding a to p (final product = sum of all a's corresponding to odd b's) */
+        if (b & 1) /* if b is odd, then add the corresponding a to p (final product = sum of all a's corresponding to odd b's) */
+        {
             p ^= a; /* since we're in GF(2^m), addition is an XOR */
-
-        if (a & 0x80)             /* GF modulo: if a >= 128, then it will overflow when shifted left, so reduce */
+        }
+        if (a & 0x80) /* GF modulo: if a >= 128, then it will overflow when shifted left, so reduce */
+        {
             a = (a << 1) ^ 0x11b; /* XOR with the primitive polynomial x^8 + x^4 + x^3 + x + 1 (0b1_0001_1011) – you can change it but it must be irreducible */
+        }
         else
+        {
             a <<= 1; /* equivalent to a*2 */
-        b >>= 1;     /* equivalent to b // 2 */
+        }
+        b >>= 1; /* equivalent to b // 2 */
     }
     return p;
 }
-void circular_left_shift(uint8_t *row, int steps)
+void mul(uint8_t m[4][4], const uint8_t mat[4][4])
 {
-    uint8_t new_row[4] = {0};
-    for (int i = 3; i >= 0; i--)
+    for (int col = 0; col < 4; col++)
     {
-        new_row[i - steps < 0 ? 4 + (i - steps) : i - steps] = row[i];
-    }
-    for (int i = 0; i < 4; i++)
-    {
-        row[i] = new_row[i];
+        uint8_t new_col[4] = {0};
+        for (int i = 0, k = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                new_col[k] ^= gmul(m[j][col], mat[i][j]);
+            }
+            k++;
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            m[i][col] = new_col[i];
+        }
     }
 }
-void make_sub(uint8_t &byte)
+void circular_left_shift(uint8_t m[4][4])
 {
-    uint8_t r = (byte >> 4) & 0xF;
-    uint8_t c = byte & 0xF;
-    byte = sbox[get_index(r, c)];
+    for (int r = 0; r < 4; r++)
+    {
+        uint8_t *row = m[r];
+        uint8_t new_row[4] = {0};
+        for (int i = 3; i >= 0; i--)
+        {
+            new_row[i - r < 0 ? 4 + (i - r) : i - r] = row[i];
+        }
+        memcpy(row, new_row, sizeof(uint8_t) * 4);
+    }
 }
-void add_round_key(uint8_t k[4][4], int round)
+void circular_right_shift(uint8_t m[4][4])
+{
+    for (int r = 0; r < 4; r++)
+    {
+        uint8_t *row = m[r];
+        uint8_t new_row[4] = {0};
+        for (int i = 3; i >= 0; i--)
+        {
+            new_row[(i + r) % 4] = row[i];
+        }
+        memcpy(row, new_row, sizeof(uint8_t) * 4);
+    }
+}
+void key_expand(uint8_t k[4][4], const uint8_t *box, int round)
 {
     uint8_t new_col[4] = {0};
     for (int i = 0; i < 4; i++)
     {
         int idx = i - 1 < 0 ? 4 + (i - 1) : i - 1;
         new_col[idx] = k[i][3];
-        make_sub(new_col[idx]);
+        make_sub(new_col[idx], box);
         k[idx][0] = k[idx][0] ^ new_col[idx] ^ rcon[idx][round];
     }
     for (int i = 1; i < 4; i++)
@@ -85,30 +171,14 @@ void add_round_key(uint8_t k[4][4], int round)
         }
     }
 }
-void sub(uint8_t m[4][4])
+void sub(uint8_t m[4][4], const uint8_t *box)
 {
     for (int i = 0; i < 4; i++)
     {
         for (int j = 0; j < 4; j++)
         {
-            make_sub(m[i][j]);
+            make_sub(m[i][j], box);
         }
-    }
-}
-void mul(uint8_t m[4][4], int col)
-{
-    uint8_t new_col[4] = {0};
-    for (int i = 0, k = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
-            new_col[k] ^= gmul(m[j][col], mds[i][j]);
-        }
-        k++;
-    }
-    for (int i = 0; i < 4; i++)
-    {
-        m[i][col] = new_col[i];
     }
 }
 void mxor(uint8_t m[4][4], uint8_t k[4][4])
@@ -121,7 +191,7 @@ void mxor(uint8_t m[4][4], uint8_t k[4][4])
         }
     }
 }
-void encrypt(uint8_t msg[16], uint8_t key[16])
+void encrypt(const uint8_t *msg, const uint8_t *key, uint8_t *ouput)
 {
     uint8_t m[4][4];
     uint8_t k[4][4];
@@ -137,37 +207,85 @@ void encrypt(uint8_t msg[16], uint8_t key[16])
     mxor(m, k);
     for (int i = 0; i < 9; i++)
     {
-        sub(m);
-        for (int j = 0; j < 4; j++)
-        {
-            circular_left_shift(m[j], j);
-        }
-        for (int j = 0; j < 4; j++)
-        {
-            mul(m, j);
-        }
-        add_round_key(k, i);
+        sub(m, sbox);
+        circular_left_shift(m);
+        mul(m, mds);
+        key_expand(k, sbox, i);
         mxor(m, k);
     }
-    sub(m);
-    for (int j = 0; j < 4; j++)
-    {
-        circular_left_shift(m[j], j);
-    }
-    add_round_key(k, 9);
+    sub(m, sbox);
+    circular_left_shift(m);
+    key_expand(k, sbox, 9);
     mxor(m, k);
+    for (int i = 0, idx = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            ouput[idx++] = m[j][i];
+        }
+    }
+}
+void decrypt(const uint8_t *msg, const uint8_t *key)
+{
+    uint8_t keys[10][4][4];
+    uint8_t copy_key[4][4];
+    uint8_t block[4][4];
+    for (int i = 0, idx = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            keys[0][j][i] = key[idx];
+            copy_key[j][i] = key[idx];
+            block[j][i] = msg[idx];
+            idx++;
+        }
+    }
+    key_expand(keys[0], sbox, 0);
+    for (int i = 1; i < 10; i++)
+    {
+        copy(keys[i], keys[i - 1]);
+        key_expand(keys[i], sbox, i);
+    }
+    mxor(block, keys[9]);
+    circular_right_shift(block);
+    sub(block, inv_sbox);
+    for (int i = 8; i >= 0; i--)
+    {
+        mxor(block, keys[i]);
+        mul(block, inv_mds);
+        circular_right_shift(block);
+        sub(block, inv_sbox);
+    }
+    mxor(block, copy_key);
     for (int i = 0; i < 4; i++)
     {
         for (int j = 0; j < 4; j++)
         {
-            printf("%X ", m[j][i]);
+            printf("%c", block[j][i]);
         }
     }
+    printf("\n");
 }
+
 int main()
 {
-    uint8_t msg[16] = {'H', 'o', 'l', 'a', ' ', 'm', 'u', 'n', 'd', 'o', ' ', 'e', 's', 't', 'e', '.'};
+    std::string msg = "mensaje importante a encriptar";
     uint8_t key[16] = {'E', 's', 't', 'a', ' ', 'e', 's', ' ', 'l', 'a', ' ', 'c', 'l', 'a', 'v', 'e'};
-    encrypt(msg, key);
+    std::vector<uint8_t> padding_msg(msg.begin(), msg.end());
+    while (padding_msg.size() % 16)
+    {
+        padding_msg.push_back('\0');
+    }
+    for (int i = 0; i < padding_msg.size() / 16; i++)
+    {
+        uint8_t ouput[16];
+        encrypt(padding_msg.data() + 16 * i, key, ouput);
+        for (int i = 0; i < 16; i++)
+        {
+            printf("%X ", ouput[i]);
+        }
+        printf("\n");
+        decrypt(ouput, key);
+    }
     return 0;
 }
