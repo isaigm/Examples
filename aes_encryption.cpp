@@ -3,6 +3,7 @@
 #include <string.h>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 static const uint8_t inv_sbox[256] = {
     0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38,
@@ -263,29 +264,45 @@ void decrypt(const uint8_t *msg, const uint8_t *key)
         {
             printf("%c", block[j][i]);
         }
+
     }
-    printf("\n");
+
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    std::string msg = "mensaje importante a encriptar";
-    uint8_t key[16] = {'E', 's', 't', 'a', ' ', 'e', 's', ' ', 'l', 'a', ' ', 'c', 'l', 'a', 'v', 'e'};
-    std::vector<uint8_t> padding_msg(msg.begin(), msg.end());
-    while (padding_msg.size() % 16)
+    if (argc > 1)
     {
-        padding_msg.push_back('\0');
-    }
-    for (int i = 0; i < padding_msg.size() / 16; i++)
-    {
-        uint8_t ouput[16];
-        encrypt(padding_msg.data() + 16 * i, key, ouput);
-        for (int i = 0; i < 16; i++)
+        char *file = argv[2];
+        int opt = argv[1][0] - '0';
+        std::ifstream ifs(file, std::ifstream::in | std::fstream::binary);
+        if (ifs.is_open())
         {
-            printf("%X ", ouput[i]);
+            uint8_t key[16] = {'E', 's', 't', 'a', ' ', 'e', 's', ' ', 'l', 'a', ' ', 'c', 'l', 'a', 'v', 'e'};
+            if (opt == 0)
+            {
+                std::ofstream ofs("file.enc", std::ios::ate);
+                while (!ifs.eof())
+                {
+                    uint8_t buff[16] = {0};
+                    ifs.read((char *)buff, sizeof(uint8_t) * 16);
+                    uint8_t ouput[16];
+                    encrypt(buff, key, ouput);
+                    ofs.write((char *)ouput, sizeof(uint8_t) * 16);
+                }
+                ofs.close();
+            }
+            else
+            {
+                while (!ifs.eof())
+                {
+                    uint8_t buff[16] = {0};
+                    ifs.read((char *)buff, sizeof(uint8_t) * 16);
+                    decrypt(buff, key);
+                }
+            }
+            ifs.close();
         }
-        printf("\n");
-        decrypt(ouput, key);
     }
     return 0;
 }
