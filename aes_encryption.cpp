@@ -264,11 +264,8 @@ void decrypt(const uint8_t *msg, const uint8_t *key)
         {
             printf("%c", block[j][i]);
         }
-
     }
-
 }
-
 int main(int argc, char **argv)
 {
     if (argc > 1)
@@ -286,9 +283,12 @@ int main(int argc, char **argv)
                 {
                     uint8_t buff[16] = {0};
                     ifs.read((char *)buff, sizeof(uint8_t) * 16);
-                    uint8_t ouput[16];
-                    encrypt(buff, key, ouput);
-                    ofs.write((char *)ouput, sizeof(uint8_t) * 16);
+                    if (ifs.gcount() > 0)
+                    {
+                        uint8_t ouput[16] = {0};
+                        encrypt(buff, key, ouput);
+                        ofs.write((char *)ouput, sizeof(uint8_t) * 16);
+                    }
                 }
                 ofs.close();
             }
@@ -298,7 +298,11 @@ int main(int argc, char **argv)
                 {
                     uint8_t buff[16] = {0};
                     ifs.read((char *)buff, sizeof(uint8_t) * 16);
-                    decrypt(buff, key);
+                    std::streamsize data_size = ifs.gcount();
+                    if (data_size > 0)
+                    {
+                        decrypt(buff, key);
+                    }
                 }
             }
             ifs.close();
