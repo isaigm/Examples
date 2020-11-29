@@ -3,7 +3,9 @@
 #include <time.h>
 #include <sys/time.h>
 #include <SFML/Graphics.h>
-static const uint n = 230;
+#define WIDTH 800
+#define HEIGHT 600
+static const uint n = 145;
 void drawRects(sfRenderWindow *window, sfRectangleShape **rects){
     for (uint i = 0; i < n; i++) {
         sfRenderWindow_drawRectangleShape(window, rects[i], NULL);
@@ -33,10 +35,10 @@ int particion(sfRenderWindow *window, sfRectangleShape **rects, int inicio, int 
             sfRectangleShape_setSize(rects[i], sfRectangleShape_getSize(rects[j]));
             sfRectangleShape_setSize(rects[j], tam);
             sfVector2f pos = sfRectangleShape_getPosition(rects[i]);
-            pos.y  = 720 - sfRectangleShape_getSize(rects[i]).y;
+            pos.y  = HEIGHT - sfRectangleShape_getSize(rects[i]).y;
             sfRectangleShape_setPosition(rects[i], pos);
             pos = sfRectangleShape_getPosition(rects[j]);
-            pos.y  = 720 - sfRectangleShape_getSize(rects[j]).y;
+            pos.y  = HEIGHT - sfRectangleShape_getSize(rects[j]).y;
             sfRectangleShape_setPosition(rects[j], pos);
             draw(window, rects);
             i++;
@@ -61,8 +63,8 @@ int main()
     sfRectangleShape **rects;
     rects = malloc(sizeof (sfRectangleShape *) * n);
     sfVideoMode videomode;
-    videomode.width = 1280;
-    videomode.height = 720;
+    videomode.width = WIDTH;
+    videomode.height = HEIGHT;
     struct timeval inicio, final;
     gettimeofday(&inicio, NULL);
     for(uint i = 0; i < n; i++){
@@ -70,9 +72,9 @@ int main()
         sfVector2f pos;
         sfVector2f size;
         size.x = 5;
-        size.y = rand() % 720;
+        size.y = rand() % HEIGHT;
         pos.x = i * (size.x + 0.5f);
-        pos.y = 720 - size.y;
+        pos.y = HEIGHT - size.y;
         sfRectangleShape_setSize(rects[i], size);
         sfRectangleShape_setPosition(rects[i], pos);
         sfRectangleShape_setFillColor(rects[i], sfBlack);
@@ -80,8 +82,8 @@ int main()
     sfRenderWindow *window = sfRenderWindow_create(videomode, "Quicksort", sfDefaultStyle, NULL);
     sfEvent event;
     sfVector2i pos;
-    pos.x = (sfVideoMode_getDesktopMode().width-1280)/2;
-    pos.y = (sfVideoMode_getDesktopMode().height-720)/2;
+    pos.x = (sfVideoMode_getDesktopMode().width-WIDTH)/2;
+    pos.y = (sfVideoMode_getDesktopMode().height-HEIGHT)/2;
     sfRenderWindow_setPosition(window, pos);
     sfRenderWindow_setFramerateLimit(window, 60);
     quicksort(window, rects, n);
