@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
-#define M_ROWS 41
-#define M_COLS 121
+#define M_ROWS 33
+#define M_COLS 151
 static char map[M_ROWS][M_COLS];
 enum Dir
 {
@@ -99,7 +99,7 @@ int main()
         enum Dir aux;
         enum Dir right;
         char ch;
-        pos.x = 1;
+        pos.x = 30;
         pos.y = 1;
         initscr();
         start_color();
@@ -115,9 +115,9 @@ int main()
             if (pos.y < M_ROWS && pos.x < M_COLS)
             {
                 attron(COLOR_PAIR(2));
-                mvaddch(pos.y, pos.x, '@');
+                mvaddch(pos.y, pos.x, '&');
                 attroff(COLOR_PAIR(2));
-                mvaddch(1, 123, (int) curr_dir + '0');
+                mvaddch(1, 152, (int) curr_dir + '0');
                 refresh();
                 right = next_dir(curr_dir);
                 switch (right)
@@ -183,10 +183,10 @@ int main()
                         pos.y -= 1;
                     break;
                 }
-                clear();
-                msleep(65);
+                erase();
+                msleep(16);
             }else{
-                mvaddstr(1, 123, "Solved");
+                mvaddstr(1, 152, "Solved");
                 refresh();
                 if(getch() == 'q'){
                     break;
