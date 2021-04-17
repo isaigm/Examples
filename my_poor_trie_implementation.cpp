@@ -8,7 +8,6 @@ struct node
     {
         this->ch = ch;
     }
-
 };
 void insert(node* root, std::string &word, size_t idx)
 {
