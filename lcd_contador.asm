@@ -53,20 +53,20 @@ loop
 	call 	enviar_comando
 	call 	retardo_1ms
 	movf 	cnt3, W
-	addlw '0'
+	addlw 	'0'
 	call 	enviar_caracter
 	call 	retardo_1ms
 	movf 	cnt2, W
-	addlw '0'
+	addlw 	'0'
 	call 	enviar_caracter
 	call 	retardo_1ms
 	movf 	cnt, W
-	addlw '0'
+	addlw 	'0'
 	call 	enviar_caracter
 	call 	retardo_1ms
 	incf 	cnt,F
 	movf 	cnt,W
-	sublw d'10'
+	sublw 	d'10'
 	btfsc	STATUS,Z
 	call 	add_d2
 	call 	retardo_100ms
@@ -76,7 +76,7 @@ loop
 add_d2
 	incf 	cnt2, F
 	movf 	cnt2,W
-	sublw d'10'
+	sublw 	d'10'
 	btfsc	STATUS,Z
 	call 	add_d3
 	clrf 	cnt
@@ -84,28 +84,28 @@ add_d2
 add_d3
 	incf 	cnt3, F
 	movf 	cnt3, W
-	sublw d'10'
-	btfsc STATUS, Z
+	sublw 	d'10'
+	btfsc 	STATUS, Z
 	clrf 	cnt3
 	clrf 	cnt2
 	return
 enviar_comando
-	bcf RS 
-	movwf PORTC
-	call retardo_1ms
-	call retardo_1ms
-	bsf E ;habilitar LCD
-	call retardo_1ms
-	bcf E
+	bcf 	RS 
+	movwf 	PORTC
+	call 	retardo_1ms
+	call 	retardo_1ms
+	bsf 	E
+	call 	retardo_1ms
+	bcf 	E
 	return 
 enviar_caracter
-	bsf RS	
-	movwf PORTC
-	call retardo_1ms
-	call retardo_1ms
-	bsf E ;habilitar LCD
-	call retardo_1ms
-	bcf E
+	bsf 	RS	
+	movwf 	PORTC
+	call 	retardo_1ms
+	call 	retardo_1ms
+	bsf 	E ; habilitar y deshabilitar E necesario para enviar info al lcd
+	call 	retardo_1ms
+	bcf 	E
 	return
 retardo_200ms				
 	movlw	d'200'	;repetimos 200 veces el retardo de un 1 ms		
@@ -130,9 +130,9 @@ loop1
 loop2
 	nop
 	decfsz	contador1,F	
-	goto	  loop2		
+	goto	loop2		
 	decfsz	contador2,F		
-	goto	  loop1 	
+	goto	loop1 	
 	return
 retardo_100micros
 	movlw d'100'
