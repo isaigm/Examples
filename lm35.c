@@ -20,35 +20,38 @@ void print_string(const char *str);
 void main(void)
 {
     TRISAbits.TRISA0    = 1;
-    ADCON1bits.PCFG3    = 1;
+    ADCON1bits.PCFG3    = 1;//unicamente ra0 como entrada analogica y los demas digitales
     ADCON1bits.PCFG2    = 1;
     ADCON1bits.PCFG1    = 1;
     ADCON1bits.PCFG0    = 0;
-    ADCON1bits.ADCS2    = 1;
-    ADCON1bits.ADFM     = 0;
-    ADCON0bits.ADCS1    = 1;
+    
+    ADCON1bits.ADCS2    = 1;//fosc/64
+    
+    ADCON1bits.ADFM     = 0;//justificacion a la izquierda, ADRESH tendra los 8 bits mas significativos y ADRESL los 2 bits menos significativos
+    
+    ADCON0bits.ADCS1    = 1;//fosc/64
     ADCON0bits.ADCS0    = 0;
-    ADCON0bits.CHS2     = 0;
+    
+    ADCON0bits.CHS2     = 0;//seleccion del canal 0
     ADCON0bits.CHS1     = 0;
     ADCON0bits.CHS0     = 0;
-    ADCON0bits.ADON = 1;
-    uint16_t adc = 0;
+    ADCON0bits.ADON     = 1;//adc activo
+    uint16_t adc        = 0;//para guardar los 10 bits
     char buff[10];
-    TRISD = 0;
+    TRISD = 0; //a diferencia de ASM, aqui no hay necesidad de cambiar de banco
     TRISC = 0;
     PORTC = 0;
     PORTD = 0;
     __delay_ms(15);
-    enviar_comando(0x30);
+    enviar_comando(0x30); //inicializando LCD
     enviar_comando(0x30);
     enviar_comando(0x32);
-    enviar_comando(0x2C);
+    enviar_comando(0x2C); 
     enviar_comando(0xC);
     enviar_comando(0x6);
     enviar_comando(0x1);
-    unsigned char punto[8] = { 0b00000, 0b01110, 0b01010, 0b01110, 0b00000, 0b00000, 0b00000, 0b00000 };
-
-    enviar_comando(0x40);
+    unsigned char punto[8] = { 0b00000, 0b01110, 0b01010, 0b01110, 0b00000, 0b00000, 0b00000, 0b00000 }; //para mostrar el simbolo ° mas o menos XD
+    enviar_comando(0x40); //escribir los bytes anteriores en la cgram
     for(int i = 0; i < 8; i++)
         
     {
@@ -58,18 +61,21 @@ void main(void)
     while(1)
     {
         ADCON0bits.GO = 1;
-        enviar_comando(0x1);
-        while(ADCON0bits.GO)
+        enviar_comando(0x1); //limpiar pantalla
+        while(ADCON0bits.GO) //mientras no este lista lo conversion ADC
         {
             
         }
-        adc = (uint16_t)(ADRESH << 2) | (uint16_t)(ADRESL & 3);
-        float temp = (float )adc * 5 * 100 / 1023;
-        sprintf(buff, "%.1f", temp);
+        //rotamos ADRESH 2 veces a la izquierda para dejar espacio para poner ahi los 2 bits menos significativos del ADRESL
+        //los cuales se encuentran en los bits 7 y 6 de ADRESL, asi que debemos rotar este registro 2 veces a la derecha para poner
+        //esos 2 bits en los bits 1 y 0, finalmente hacer un or para combinar los registros ya rotados
+        adc = (uint16_t)(ADRESH << 2) | (uint16_t)(ADRESL >> 6);
+        float temp = (float )adc * 5 * 100 / 1023; // por cada bit hay 5/1023 volts, multiplicamos por 100 para obtener los grados centigrados
+        sprintf(buff, "%.1f", temp);//parecido a printf, solo que lo que se imprime no se va a la salida estandar, sino al buffer que la pasamos en el primer parametro
         print_string("Temp: ");
         print_string(buff);
         enviar_caracter(' ');
-        enviar_caracter(0);
+        enviar_caracter(0); //mostrar el simbolo ° mas o menos XD
         enviar_caracter('C');
         
         __delay_ms(500);
@@ -87,7 +93,7 @@ void enviar_caracter(char c)
     PORTDbits.RD5 = 1;
     enviar_dato(c);
 }
-void enviar_dato(int dato)
+void enviar_dato(int dato) //ya que trabajamos en modo de 4 bits, primero enviamos el nibble alto y luego el bajo
 {
     PORTC = (dato >> 4) & 0xF;
     __delay_ms(1);
