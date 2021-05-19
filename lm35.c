@@ -37,7 +37,7 @@ void main(void)
     ADCON0bits.CHS0     = 0;
     ADCON0bits.ADON     = 1;//adc activo
     uint16_t adc        = 0;//para guardar los 10 bits
-    char buff[10];
+    char buff[10]; //para guardar el numero flotante convertido a string
     TRISD = 0; //a diferencia de ASM, aqui no hay necesidad de cambiar de banco
     TRISC = 0;
     PORTC = 0;
@@ -67,11 +67,11 @@ void main(void)
             
         }
         //rotamos ADRESH 2 veces a la izquierda para dejar espacio para poner ahi los 2 bits menos significativos del ADRESL
-        //los cuales se encuentran en los bits 7 y 6 de ADRESL, asi que debemos rotar este registro 2 veces a la derecha para poner
+        //los cuales se encuentran en los bits 7 y 6 de ADRESL, asi que debemos rotar este registro 6 veces a la derecha para poner
         //esos 2 bits en los bits 1 y 0, finalmente hacer un or para combinar los registros ya rotados
         adc = (uint16_t)(ADRESH << 2) | (uint16_t)(ADRESL >> 6);
         float temp = (float )adc * 5 * 100 / 1023; // por cada bit hay 5/1023 volts, multiplicamos por 100 para obtener los grados centigrados
-        sprintf(buff, "%.1f", temp);//parecido a printf, solo que lo que se imprime no se va a la salida estandar, sino al buffer que la pasamos en el primer parametro
+        sprintf(buff, "%.1f", temp);//parecido a printf, solo que lo que se imprime no se va a la salida estandar, sino al buffer que le pasamos en el primer parametro
         print_string("Temp: ");
         print_string(buff);
         enviar_caracter(' ');
