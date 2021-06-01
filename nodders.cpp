@@ -7,10 +7,10 @@ int main()
     sf::RenderWindow window(sf::VideoMode(111, 90), "Nodders");
     int curr_frame = 0;
     float dt = 0;
-    sf::Texture frames[140];
+    sf::Texture frames[141];
     sf::Sprite sprite;
     sf::Clock clock;
-    for (int i = 0; i <= 140; i++)
+    for (int i = 0; i < 141; i++)
     {
         char path[16];
         snprintf(path, sizeof(path), "frames/%d.gif", i);
