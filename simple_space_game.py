@@ -1,27 +1,24 @@
 import machine, utime, framebuf, random
 from ssd1306 import SSD1306_I2C
-
 ROWS = 63
 COLS = 127
-SPRITE_WIDtH = 16
+SPRITE_WIDTH = 16
 SPRITE_HEIGHT = 16
 i2c = machine.I2C(1, scl=machine.Pin(15), sda=machine.Pin(14))
 oled = SSD1306_I2C(128, 64, i2c)
 pot = machine.ADC(28)
 shoot = machine.Pin(16, machine.Pin.IN, machine.Pin.PULL_DOWN)
-can_shoot = False
-cpu_shoot = False
 game_over = False
 who_won = False
 class spaceship:
     def __init__(self, x: int, y: int, sprite: list):
         self.x = x
         self.y = y
-        self.fb = framebuf.FrameBuffer(bytearray(sprite), SPRITE_WIDtH, SPRITE_HEIGHT, framebuf.MONO_HLSB)
+        self.fb = framebuf.FrameBuffer(bytearray(sprite), SPRITE_WIDTH, SPRITE_HEIGHT, framebuf.MONO_HLSB)
         self.speed = 1
         self.health = 20
         self.bullets = []
-
+        self.can_shoot = False
 class bullet: 
     def __init__(self, x: int, y: int, speed: int):
         self.x = x
@@ -29,7 +26,7 @@ class bullet:
         self.speed = speed
     
     def collide(self, _spaceship):
-        colliding = _spaceship.x <= self.x <= _spaceship.x + SPRITE_WIDtH and _spaceship.y <= self.y <= _spaceship.y + SPRITE_HEIGHT
+        colliding = _spaceship.x <= self.x <= _spaceship.x + SPRITE_WIDTH and _spaceship.y <= self.y <= _spaceship.y + SPRITE_HEIGHT
         if colliding:
             _spaceship.health -= 1
         return colliding
@@ -43,11 +40,17 @@ def try_to_avoid_bullets(cpu, bullets):
                 return temp[i].y + 1
     return None
 
+player = spaceship(5, random.randint(0, ROWS), [0x00, 0x00, 0xfc, 0x00, 0xfc, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0xe0, 0xff, 0xf0, 
+                0xff, 0xf0, 0xff, 0xe0, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xfc, 0x00, 0xfc, 0x00, 0x00, 0x00])
+
+cpu =  spaceship(COLS - 16 - 5, random.randint(0, ROWS), [0x00, 0x00, 0x00, 0x3f, 0x00, 0x3f, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x07, 0xff, 0x0f, 0xff, 
+                0x0f, 0xff, 0x07, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0x3f, 0x00, 0x3f, 0x00, 0x00])
+
 def enable_shoot(timer):
-    global can_shoot
-    global cpu_shoot
-    can_shoot = True
-    cpu_shoot = True
+    global player
+    global cpu
+    cpu.can_shoot = True
+    player.can_shoot = True
     
 def update_pos(cpu, target):
     if cpu.y < target:
@@ -65,23 +68,19 @@ def game_over_screen(win):
     else:
         oled.text("PERDISTE", (COLS - 64)// 2 , ROWS // 2)
         
-player = spaceship(2, 10, [0x00, 0x00, 0xfc, 0x00, 0xfc, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0xe0, 0xff, 0xf0, 
-                0xff, 0xf0, 0xff, 0xe0, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xfc, 0x00, 0xfc, 0x00, 0x00, 0x00])
 
-cpu =  spaceship(COLS - 16 - 5, 10, [0x00, 0x00, 0x00, 0x3f, 0x00, 0x3f, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x07, 0xff, 0x0f, 0xff, 
-                0x0f, 0xff, 0x07, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0x3f, 0x00, 0x3f, 0x00, 0x00])
 shoot_timer = machine.Timer()
 shoot_timer.init(period=500, mode=machine.Timer.PERIODIC, callback=enable_shoot)
 
 while True:
     if not game_over:
         player.y = (pot.read_u16() * 47) // 65535
-        if shoot.value() and can_shoot:
-            can_shoot = False
+        if shoot.value() and player.can_shoot:
+            player.can_shoot = False
             player.bullets.append(bullet(player.x, player.y + 7, 1))
-        if cpu_shoot:
+        if cpu.can_shoot:
             cpu.bullets.append(bullet(cpu.x, cpu.y + 7, 1))
-            cpu_shoot = False
+            cpu.can_shoot = False
         for b in player.bullets:
             b.x += 1
         for b in cpu.bullets:
@@ -114,5 +113,11 @@ while True:
         oled.fill(0)
         game_over_screen(who_won)
         oled.show()
-
+        utime.sleep(2)
+        if shoot.value():
+            game_over = False
+            player.y = random.randint(0, ROWS)
+            cpu.y = random.randint(0, ROWS)
+            cpu.health = 20
+            player.health = 20
 
