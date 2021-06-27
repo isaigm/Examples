@@ -1,6 +1,6 @@
 import machine, utime, framebuf, random
 from ssd1306 import SSD1306_I2C
-
+#working on raspberry pi pico
 ROWS = 63
 COLS = 127
 SPRITE_WIDTH = 16
@@ -11,6 +11,8 @@ pot = machine.ADC(28)
 shoot = machine.Pin(16, machine.Pin.IN, machine.Pin.PULL_DOWN)
 game_over = False
 who_won = False
+end_delay = True
+
 class spaceship:
     def __init__(self, x: int, y: int, sprite: list):
         self.x = x
@@ -37,7 +39,7 @@ class bullet:
         if colliding:
             _spaceship.health -= 1
         return colliding
-
+    
 def try_to_avoid_bullets(cpu, bullets):
     if len(bullets) > 0:
         temp = [bullet(cpu.x, 0, 1)] + bullets + [bullet(cpu.x, ROWS, 1)]
@@ -71,11 +73,10 @@ def game_over_screen(win):
     oled.hline(0, 0, COLS, 1)
     oled.hline(0, ROWS, COLS, 1)
     if win:
-        oled.text("GANASTE!!", (COLS - 81) // 2 , ROWS // 2)
+        oled.text("GANASTE!!", (COLS - 81)//2 , ROWS//2)
     else:
-        oled.text("PERDISTE", (COLS - 64)// 2 , ROWS // 2)
+        oled.text("PERDISTE", (COLS - 64)//2 , ROWS//2)
         
-
 shoot_timer = machine.Timer()
 shoot_timer.init(period=500, mode=machine.Timer.PERIODIC, callback=enable_shoot)
 
@@ -94,6 +95,7 @@ while True:
             b.x -= 1
         player.bullets = list(filter(lambda b: b.x <= COLS and not b.collide(cpu), player.bullets))
         cpu.bullets = list(filter(lambda b: b.x >= 0 and not b.collide(player), cpu.bullets))
+        player.bullets.sort(key=lambda b: b.y)
         if cpu.health <= 0:
             game_over = True
             who_won = True
@@ -116,9 +118,12 @@ while True:
         oled.fill(0)
         game_over_screen(who_won)
         oled.show()
-        utime.sleep(2)
+        if end_delay:
+            end_delay = False
+            utime.sleep(2)
         if shoot.value():
             game_over = False
+            end_delay = True
             player.y = random.randint(0, ROWS)
             cpu.y = random.randint(0, ROWS)
             cpu.health = 20
