@@ -1,5 +1,6 @@
 import machine, utime, framebuf, random
 from ssd1306 import SSD1306_I2C
+
 ROWS = 63
 COLS = 127
 SPRITE_WIDTH = 16
@@ -19,6 +20,12 @@ class spaceship:
         self.health = 20
         self.bullets = []
         self.can_shoot = False
+    
+    def draw(self, oled):
+        for b in self.bullets:
+            oled.pixel(b.x, b.y, 1)
+        oled.blit(self.fb, self.x, self.y)
+        
 class bullet: 
     def __init__(self, x: int, y: int, speed: int):
         self.x = x
@@ -101,12 +108,8 @@ while True:
         oled.fill(0)
         oled.text(str(cpu.health), COLS // 2 + 1, 0)
         oled.text(str(player.health), COLS // 2 - 16, 0)
-        for b in player.bullets:
-            oled.pixel(b.x, b.y, 1)
-        for b in cpu.bullets:
-            oled.pixel(b.x, b.y, 1)
-        oled.blit(player.fb, player.x, player.y)
-        oled.blit(cpu.fb, cpu.x, cpu.y)
+        player.draw(oled)
+        cpu.draw(oled)
         oled.vline(COLS // 2, 0, ROWS, 1)
         oled.show()
     else:
@@ -120,4 +123,4 @@ while True:
             cpu.y = random.randint(0, ROWS)
             cpu.health = 20
             player.health = 20
-
+            
