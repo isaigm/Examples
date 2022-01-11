@@ -1,0 +1,208 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
+#include <string.h>
+#include <SFML/Graphics.hpp>
+#include <CL/opencl.h>
+
+#define MAX_SIZE 0x10000
+#define COLS 800
+#define ROWS 600
+
+void fill_random(uint8_t *cells)
+{
+    for (int i = 0; i < ROWS * COLS; i++)
+    {
+        cells[i] = rand() % 2;
+    }
+    cells[0] = 1;
+}
+int main(int argc, char *argv[])
+{
+    auto mtp = "__kernel void map_to_pixels(__global unsigned char *cells, __global unsigned char *pixels, int rows, int cols)\n"
+               "{\n"
+               "\n"
+               "    int i = get_global_id(0);\n"
+               "    int j = get_global_id(1);\n"
+               "    if(i >= rows || j >= cols) return;\n"
+               "    int cell = cells[j + i * cols];\n"
+               "    if (cell)\n"
+               "    {\n"
+               "        pixels[(j + i * cols) * 4] = 0;\n"
+               "        pixels[(j + i * cols) * 4 + 1] = 0;\n"
+               "        pixels[(j + i * cols) * 4 + 2] = 0;\n"
+               "        pixels[(j + i * cols) * 4 + 3] = 0;\n"
+               "    }\n"
+               "    else\n"
+               "    {\n"
+               "        pixels[(j + i * cols) * 4] = 255;\n"
+               "        pixels[(j + i * cols) * 4 + 1] = 255;\n"
+               "        pixels[(j + i * cols) * 4 + 2] = 255;\n"
+               "        pixels[(j + i * cols) * 4 + 3] = 255;\n"
+               "    }\n"
+               "}";
+
+    FILE *fp = fopen("kernel.cl", "r");
+    if (fp == NULL)
+    {
+        exit(1);
+    }
+    sf::RenderWindow window(sf::VideoMode(COLS, ROWS), "GoL");
+    window.setVerticalSyncEnabled(true);
+    unsigned int rows = ROWS;
+    unsigned int cols = COLS;
+    size_t ncells = ROWS * COLS * sizeof(uint8_t);
+    char *kernelSource = (char *)malloc(sizeof(char) * MAX_SIZE);
+    fread(kernelSource, 1, MAX_SIZE, fp);
+
+    uint8_t *hostCells;
+    uint8_t *tempHostCells;
+    hostCells = (uint8_t *)malloc(ncells);
+    tempHostCells = (uint8_t *)malloc(ncells);
+
+    cl_mem devCells;
+    cl_mem devTempCells;
+
+    fill_random(hostCells);
+    memcpy(tempHostCells, hostCells, ncells);
+
+    cl_platform_id cpPlatform;    // OpenCL platform
+    cl_device_id device_id;       // device ID
+    cl_context context;           // context
+    cl_command_queue queue;       // command queue
+    cl_program program, program2; // program
+    cl_kernel kernel;             // kernel
+    cl_kernel kernel2;
+    size_t *globalSize = (size_t *)malloc(sizeof(size_t) * 2);
+    globalSize[0] = ROWS;
+    globalSize[1] = COLS;
+    cl_int err;
+
+    // Bind to platform
+    err = clGetPlatformIDs(1, &cpPlatform, NULL);
+    // Get ID for the device
+    err = clGetDeviceIDs(cpPlatform, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
+    // Create a context
+    context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
+    // Create a command queue
+    queue = clCreateCommandQueueWithProperties(context, device_id, 0, &err);
+
+    program = clCreateProgramWithSource(context, 1, (const char **)&kernelSource, NULL, &err);
+    clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    kernel = clCreateKernel(program, "perform_step", &err);
+
+    program2 = clCreateProgramWithSource(context, 1, (const char **)&mtp, NULL, &err);
+    clBuildProgram(program2, 0, NULL, NULL, NULL, NULL);
+    kernel2 = clCreateKernel(program2, "map_to_pixels", &err);
+
+    sf::Texture texture;
+    sf::Sprite sprite;
+    sf::Font font;
+    font.loadFromFile("Minecraft.ttf"); //best font 
+    sf::Text text;
+    text.setFont(font);
+    texture.create(COLS, ROWS);
+    sprite.setTexture(texture);
+    sf::Uint8 *pixels = new sf::Uint8[ROWS * COLS * 4];
+
+    texture.update(pixels);
+
+    cl_mem devPixels = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(unsigned char) * ROWS * COLS * 4, pixels, NULL);
+    devCells = clCreateBuffer(context, CL_MEM_READ_ONLY, ncells, NULL, NULL);
+    devTempCells = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ncells, tempHostCells, NULL);
+    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &devTempCells);
+    err |= clSetKernelArg(kernel, 2, sizeof(unsigned int), &rows);
+    err |= clSetKernelArg(kernel, 3, sizeof(unsigned int), &cols);
+
+    clSetKernelArg(kernel2, 1, sizeof(cl_mem), &devPixels);
+    clSetKernelArg(kernel2, 2, sizeof(unsigned int), &rows);
+    clSetKernelArg(kernel2, 3, sizeof(unsigned int), &cols);
+
+    sf::View view(sf::FloatRect(0, 0, COLS, ROWS));
+    sf::Clock clock;
+    text.setPosition(10, 10);
+    text.setCharacterSize(20);
+    text.setFillColor(sf::Color::Red);
+    float t = 0;
+    while (window.isOpen())
+    {
+        float dt = clock.restart().asSeconds();
+        t += dt;
+        if(t > 0.4f)
+        {
+            t = 0;
+            char fps[64];
+            snprintf(fps, 64, "FPS: %f\n", 1 / dt);
+            text.setString(fps);
+        }
+        sf::Event ev;
+        while (window.pollEvent(ev))
+        {
+            if (ev.type == sf::Event::Closed)
+                window.close();
+            if (ev.type == sf::Event::MouseWheelMoved)
+            {
+
+                view.zoom(1 - ev.mouseWheel.delta * 0.1);
+                window.setView(view);
+            }
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+        {
+            view.move(0, -dt * 200);
+            window.setView(view);
+        }
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+        {
+            view.move(0, dt * 200);
+            window.setView(view);
+        }
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+        {
+            view.move(-dt * 200, 0);
+            window.setView(view);
+        }
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+        {
+            view.move(dt * 200, 0);
+            window.setView(view);
+        }
+       
+        clEnqueueWriteBuffer(queue, devCells, CL_TRUE, 0, ncells, hostCells, 0, NULL, NULL);
+        clSetKernelArg(kernel, 0, sizeof(cl_mem), &devCells);
+        clSetKernelArg(kernel2, 0, sizeof(cl_mem), &devCells);
+        
+        clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, NULL, 0, NULL, NULL);
+        clEnqueueNDRangeKernel(queue, kernel2, 2, NULL, globalSize, NULL, 0, NULL, NULL);
+        clFinish(queue);
+        
+        clEnqueueReadBuffer(queue, devTempCells, CL_TRUE, 0, ncells, tempHostCells, 0, NULL, NULL);
+        clEnqueueReadBuffer(queue, devPixels, CL_TRUE, 0, sizeof(unsigned char) * ROWS * COLS * 4, pixels, 0, NULL, NULL);
+        memcpy(hostCells, tempHostCells, ncells);
+
+        //map_to_pixels(hostCells, pixels);
+        texture.update(pixels);
+        window.clear();
+        window.setView(view);
+        window.draw(sprite);
+        window.setView(window.getDefaultView());
+        window.draw(text);
+        window.display();
+    }
+    clReleaseMemObject(devCells);
+    clReleaseMemObject(devTempCells);
+    clReleaseMemObject(devPixels);
+    clReleaseProgram(program2);
+    clReleaseKernel(kernel2);
+    clReleaseProgram(program);
+    clReleaseKernel(kernel);
+    clReleaseCommandQueue(queue);
+    clReleaseContext(context);
+    free(hostCells);
+    free(tempHostCells);
+    delete[] pixels;
+
+    return 0;
+}
