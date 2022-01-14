@@ -5,6 +5,8 @@
 #include <string.h>
 #include <SFML/Graphics.hpp>
 #include <CL/opencl.h>
+#include <fstream>
+#include <sstream>
 
 #define MAX_SIZE 0x10000
 #define COLS 800
@@ -17,6 +19,65 @@ void fill_random(uint8_t *cells)
         cells[i] = rand() % 2;
     }
     cells[0] = 1;
+}
+void load_pattern(uint8_t *cells, const char *file, int start_row, int start_col)
+{
+    std::ifstream ifs;
+    ifs.open(file);
+    if (!ifs.is_open())
+        exit(1);
+
+    auto fill_row = [](uint8_t *cells, int state, int row, int col, int reps)
+    {
+        for (int i = col; i < col + reps; i++)
+        {
+            cells[i + row * COLS] = state;
+        }
+    };
+    int row = start_row;
+    int col = start_col;
+
+    auto decode = [&row, &col, &fill_row, start_col, start_row](uint8_t *cells, char ch, int reps)
+    {
+        switch (ch)
+        {
+        case 'b':
+            fill_row(cells, 0, row, col, reps);
+            col += reps;
+            break;
+        case 'o':
+            fill_row(cells, 1, row, col, reps);
+            col += reps;
+            break;
+        case '$':
+            col = start_col;
+            row += reps;
+            break;
+        default:
+            break;
+        }
+    };
+    while (!ifs.eof())
+    {
+        std::string line;
+        std::getline(ifs, line);
+        std::string number;
+        for (auto &ch : line)
+        {
+            if (std::isdigit(ch))
+                number.push_back(ch);
+            else if (number.size() > 0)
+            {
+                std::stringstream ss(number);
+                int cells_ = 0;
+                ss >> cells_;
+                decode(cells, ch, cells_);
+                number = "";
+            }
+            else
+                decode(cells, ch, 1);
+        }
+    }
 }
 int main(int argc, char *argv[])
 {
@@ -48,6 +109,7 @@ int main(int argc, char *argv[])
     {
         exit(1);
     }
+    srand(time(nullptr));
     sf::RenderWindow window(sf::VideoMode(COLS, ROWS), "GoL");
     window.setVerticalSyncEnabled(true);
     unsigned int rows = ROWS;
@@ -63,8 +125,9 @@ int main(int argc, char *argv[])
 
     cl_mem devCells;
     cl_mem devTempCells;
-
-    fill_random(hostCells);
+    memset(hostCells, 0, ncells);
+    load_pattern(hostCells, "pattern.rle", 100, 100);
+    // fill_random(hostCells);
     memcpy(tempHostCells, hostCells, ncells);
 
     cl_platform_id cpPlatform;    // OpenCL platform
@@ -99,7 +162,7 @@ int main(int argc, char *argv[])
     sf::Texture texture;
     sf::Sprite sprite;
     sf::Font font;
-    font.loadFromFile("Minecraft.ttf"); //best font 
+    font.loadFromFile("Minecraft.ttf"); // best font
     sf::Text text;
     text.setFont(font);
     texture.create(COLS, ROWS);
@@ -129,7 +192,7 @@ int main(int argc, char *argv[])
     {
         float dt = clock.restart().asSeconds();
         t += dt;
-        if(t > 0.4f)
+        if (t > 0.4f)
         {
             t = 0;
             char fps[64];
@@ -143,7 +206,6 @@ int main(int argc, char *argv[])
                 window.close();
             if (ev.type == sf::Event::MouseWheelMoved)
             {
-
                 view.zoom(1 - ev.mouseWheel.delta * 0.1);
                 window.setView(view);
             }
@@ -152,37 +214,33 @@ int main(int argc, char *argv[])
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
         {
             view.move(0, -dt * 200);
-            window.setView(view);
         }
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
         {
             view.move(0, dt * 200);
-            window.setView(view);
         }
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
         {
             view.move(-dt * 200, 0);
-            window.setView(view);
         }
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
         {
             view.move(dt * 200, 0);
-            window.setView(view);
         }
-       
+
         clEnqueueWriteBuffer(queue, devCells, CL_TRUE, 0, ncells, hostCells, 0, NULL, NULL);
         clSetKernelArg(kernel, 0, sizeof(cl_mem), &devCells);
         clSetKernelArg(kernel2, 0, sizeof(cl_mem), &devCells);
-        
+
         clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, NULL, 0, NULL, NULL);
         clEnqueueNDRangeKernel(queue, kernel2, 2, NULL, globalSize, NULL, 0, NULL, NULL);
         clFinish(queue);
-        
+
         clEnqueueReadBuffer(queue, devTempCells, CL_TRUE, 0, ncells, tempHostCells, 0, NULL, NULL);
         clEnqueueReadBuffer(queue, devPixels, CL_TRUE, 0, sizeof(unsigned char) * ROWS * COLS * 4, pixels, 0, NULL, NULL);
         memcpy(hostCells, tempHostCells, ncells);
 
-        //map_to_pixels(hostCells, pixels);
+        // map_to_pixels(hostCells, pixels);
         texture.update(pixels);
         window.clear();
         window.setView(view);
