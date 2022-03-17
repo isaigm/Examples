@@ -155,7 +155,7 @@ private:
                 else
                 {
                     placeBlock();
-                    mMoves++;
+               
                 }
                 break;
             default:
@@ -202,7 +202,7 @@ private:
                     mTowers[i].insertBlock(*mSelectedBlock);
                     mTowers[cameFrom].removeBlock();
                 }
-              
+                mMoves++;
                 mSelectedBlock = nullptr;
                 break;
             }
