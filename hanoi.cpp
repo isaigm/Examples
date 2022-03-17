@@ -26,10 +26,10 @@ public:
     }
     int cameFrom = 0;
 };
-struct tower
+class Tower
 {
 public:
-    tower(float x, float y)
+    Tower(float x, float y)
     {
         mTower.setSize({ TOWER_WIDTH, 200 });
         mTower.setPosition(x, y);
@@ -122,9 +122,9 @@ public:
     {
         mWindow.setVerticalSyncEnabled(true);
         float x = (WIDTH - 3 * TOWER_WIDTH) / 4;
-        mTowers.push_back(tower(x, HEIGHT / 2));
-        mTowers.push_back(tower(TOWER_WIDTH + 2 * x, HEIGHT / 2));
-        mTowers.push_back(tower(2 * TOWER_WIDTH + 3 * x, HEIGHT / 2));
+        mTowers.push_back(Tower(x, HEIGHT / 2));
+        mTowers.push_back(Tower(TOWER_WIDTH + 2 * x, HEIGHT / 2));
+        mTowers.push_back(Tower(2 * TOWER_WIDTH + 3 * x, HEIGHT / 2));
         mTowers[mStartTower].populate();
     }
     void run() {
@@ -132,26 +132,8 @@ public:
         {
             mMousePos = mWindow.mapPixelToCoords(sf::Mouse::getPosition(mWindow));
             handleEvents();
-            if (mSelectedBlock)
-            {
-                mSelectedBlock->setCenterAt(mMousePos);
-          
-            }
-            if (mTowers[mEndTower].getSize() == N && !mGameOver)
-            {
-                std::cout << "BIEN HECHO\n";
-                std::cout << "LO HICISTE EN " << mMoves << "\n";
-                if (mMoves > ((1 << N) - 1))
-                {
-
-                    std::cout << "AUNQUE PUEDES MEJORAR :')\n";
-                }
-                else
-                {
-                    std::cout << "EL MINIMO NUMERO DE MOVIMIENTOS\n";
-                }
-                mGameOver = true;
-            }
+            updateSelectedBlockPos();
+            checkEndGame();
             render();
         }
     }
@@ -226,13 +208,38 @@ private:
             }
         }
     }
+    void checkEndGame()
+    {
+        if (mTowers[mEndTower].getSize() == N && !mGameOver)
+        {
+            std::cout << "BIEN HECHO\n";
+            std::cout << "LO HICISTE EN " << mMoves << "\n";
+            if (mMoves > ((1 << N) - 1))
+            {
+
+                std::cout << "AUNQUE PUEDES MEJORAR :')\n";
+            }
+            else
+            {
+                std::cout << "EL MINIMO NUMERO DE MOVIMIENTOS\n";
+            }
+            mGameOver = true;
+        }
+    }
+    void updateSelectedBlockPos()
+    {
+        if (mSelectedBlock)
+        {
+            mSelectedBlock->setCenterAt(mMousePos);
+        }
+    }
     const int mStartTower = 0;
     const int mEndTower = 2;
     int mMoves = 0;
     bool mGameOver = false;
     sf::RenderWindow mWindow;
     Block* mSelectedBlock = nullptr;
-    std::vector<tower> mTowers;
+    std::vector<Tower> mTowers;
     sf::Vector2f mMousePos;
 };
 
