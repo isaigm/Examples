@@ -23,10 +23,22 @@ enum NOTES {
     SIB3= 466,
     SI3 =  493
 };
+float map(float n, float x1, float x2, float y1, float y2)
+{
+    float m = (y2 - y1) / (x2 - x1);
+    return y1 + m * (n - x1);
+}
 sf::Int16 squarewave(float t, float freq)
 {
     int output = std::floor(2 * freq * t);
     return 32767 * (output & 1 ? -1 : 1);
+}
+sf::Int16 sawtooth(float t, float freq)
+{
+    float T = 1.0f / freq;
+    float start = T * std::floor(t / T);
+    float end = start + T;
+    return 32767 * map(t, start, end, -1.0f, 1.0f);
 }
 class Tone : public sf::Sound
 {
@@ -40,7 +52,7 @@ public:
         int nsamples = SAMPLE_RATE * (1.0f / freq);
         for (int i = 0; i < nsamples; i++)
         {
-            sf::Int16 sample = squarewave(t, freq);
+            sf::Int16 sample = sawtooth(t, freq);
             t += dt;
             samples.push_back(sample);
         }
@@ -78,13 +90,11 @@ public:
     void update() {
         if (isPressed())
         {
-
             if (tone.getStatus() != Tone::Playing)
             {
                 tone.play();
                 tone.setLoop(true);
                 rect.setFillColor(sf::Color::Green);
-              
             }
         }
         else
@@ -156,7 +166,6 @@ public:
         for (auto& key : keys)
         {
             key->update();
-   
         }
     }
     void render(sf::RenderTarget& rt)
@@ -204,7 +213,6 @@ private:
             default:
                 break;
             }
-          
         }
     }
     void update()
@@ -231,4 +239,3 @@ int main()
     app.run();
     return 0;
 }
-
