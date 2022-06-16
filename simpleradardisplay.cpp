@@ -86,7 +86,7 @@ public:
         if (counter > 10)
         {
 
-            int steps = random(2);
+            int steps = random(1, 3);
             pos.x += steps * cos(direction);
             pos.y += steps * sin(direction);
         }
@@ -120,6 +120,8 @@ private:
 };
 std::vector<ray> rays;
 std::vector<target> targets;
+unsigned long start = 0;
+unsigned long end = 0;
 void setup()
 {
     randomSeed(analogRead(0));
@@ -154,6 +156,7 @@ void setup()
 }
 void loop()
 {
+    start = millis();
     for (auto &r : rays)
     {
         r.render();
@@ -170,10 +173,15 @@ void loop()
     tft.drawCircle(centerx, centery, 100, GREEN);
     tft.drawCircle(centerx, centery, 75, GREEN);
     tft.drawCircle(centerx, centery, 50, GREEN);
-    delay(100);
     if (counter > 10)
     {
         counter = 0;
     }
     counter += 1;
+    delay(100);
+    end = millis();
+    char fps[16];
+    float secs = (end - start) / 1000.0f; 
+    snprintf(fps, 16, "FPS:%.2f", 1/secs);
+    tft.drawString(fps, 0, 210);
 }
