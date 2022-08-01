@@ -3,7 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <math.h>
 
-static const int SAMPLE_RATE = 8000;
+static const int SAMPLE_RATE = 441000;
 static const int WIDTH = 400;
 static const int HEIGHT = 150;
 static const int KEYS = 7;
@@ -54,9 +54,10 @@ public:
         {
             sf::Int16 sample = sawtooth(t, freq);
             t += dt;
-            samples.push_back(sample);
+            samples.push_back(sample); //left channel
+            samples.push_back(sample); //right
         }
-        buffer.loadFromSamples(samples.data(), samples.size(), 1, SAMPLE_RATE);
+        buffer.loadFromSamples(samples.data(), samples.size(), 2, SAMPLE_RATE);
         setBuffer(buffer);
     }
 private:
@@ -204,6 +205,7 @@ private:
             {
             case sf::Event::Closed:
                 window.close();
+                break;
             case sf::Event::GainedFocus:
                 hasFocus = true;
                 break;
