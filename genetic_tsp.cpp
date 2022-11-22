@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <random>
 #include <set>
-#define LEN_CITIES 20
-#define CITY_RADIUS 3
+#define LEN_CITIES 100
+#define CITY_RADIUS 1
 #define POPULATION 200
 #define WIDTH 1280
 #define HEIGHT 720
@@ -62,7 +62,6 @@ public:
 				visited.insert(c2[i]);
 			}
 		}
-		
 		updateFitness();
 	}
 	agent()
@@ -130,16 +129,16 @@ int main()
 	srand(time(nullptr));
 	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "TSP genetic");
 	std::vector<agent> population;
-	window.setVerticalSyncEnabled(true);
+	//window.setVerticalSyncEnabled(true);
 	sf::Clock clock;
 	float xcenter = WIDTH / 2;
 	float ycenter = HEIGHT / 2;
 	float alpha = 0;
-	float da = 2 * M_PI / float(LEN_CITIES); 
+	float da = 2 * M_PI / float(LEN_CITIES);
 	for (int i = 0; i < LEN_CITIES; i++)
 	{
-		float x = 300 * cos(alpha) + xcenter;
-		float y = 300 * sin(alpha) + ycenter;
+		float x = xcenter + 300 * cos(alpha);
+		float y = ycenter + 300 * sin(alpha);
 		alpha += da;
 		cities.push_back(city(x, y));
 	}
@@ -167,23 +166,22 @@ int main()
 		std::sort(population.begin(), population.end(), [](agent &a1, agent &a2)
 				  { return a1.getFitness() < a2.getFitness(); });
 
-		int parents = get_rnd(20, 50);
+		int parents = get_rnd(20, 120);
+		std::vector<agent> nextGen;
 		for (int i = 0; i < parents; i++)
 		{
-			population.pop_back();
+			nextGen.push_back(population[i]);
 		}
-		std::vector<agent> newAgents;
-		for (int i = 0, j = 0; i < parents; i++, j += 2)
+		for (int i = 0; i < POPULATION - parents; i++)
 		{
-			agent a(population[j], population[j + 1]);	
+			int i1 = rand() % population.size();
+			int i2 = rand() % population.size();
+			agent a(population[i1], population[i2]);
 			if (rand() % 6 < 3)
 				a.mutate();
-			newAgents.push_back(a);
+			nextGen.push_back(a);
 		}
-		for (int i = 0; i < parents; i++)
-		{
-			population.push_back(newAgents[i]);
-		}
+		population = nextGen;
 		window.clear();
 		draw_path(population[0], window);
 		char msg[64];
