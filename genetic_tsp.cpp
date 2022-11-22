@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <random>
 #include <set>
-#define LEN_CITIES 50
+#define LEN_CITIES 20
 #define CITY_RADIUS 3
 #define POPULATION 200
 #define WIDTH 1280
@@ -17,11 +17,11 @@ public:
 	city(float x, float y) : pos(x, y)
 	{
 	}
-	void render(sf::RenderTarget& rt)
+	void render(sf::RenderTarget &rt)
 	{
 		sf::CircleShape circle(CITY_RADIUS);
 		circle.setFillColor(sf::Color::White);
-		circle.setOrigin({ CITY_RADIUS, CITY_RADIUS });
+		circle.setOrigin({CITY_RADIUS, CITY_RADIUS});
 		circle.setPosition(pos);
 		rt.draw(circle);
 	}
@@ -29,6 +29,7 @@ public:
 	{
 		return pos;
 	}
+
 private:
 	sf::Vector2f pos;
 };
@@ -39,26 +40,29 @@ int get_rnd(int min, int max)
 std::random_device rd;
 std::mt19937 g(rd());
 std::vector<city> cities;
-class agent {
+class agent
+{
 public:
-	agent(agent& p1, agent& p2)
+	agent(agent &p1, agent &p2)
 	{
 		std::set<int> visited;
 		auto &c1 = p1.getChromosomes();
 		auto &c2 = p2.getChromosomes();
+		int idx = rand() % LEN_CITIES;
+		for (int i = 0; i < idx; i++)
+		{
+			chromosomes.push_back(c1[i]);
+			visited.insert(c1[i]);
+		}
 		for (int i = 0; i < LEN_CITIES; i++)
 		{
-			if (visited.find(c1[i]) == visited.end())
-			{
-				chromosomes.push_back(c1[i]);
-				visited.insert(c1[i]);
-			}
 			if (visited.find(c2[i]) == visited.end())
 			{
 				chromosomes.push_back(c2[i]);
 				visited.insert(c2[i]);
 			}
 		}
+		
 		updateFitness();
 	}
 	agent()
@@ -89,6 +93,7 @@ public:
 	{
 		return chromosomes;
 	}
+
 private:
 	void updateFitness()
 	{
@@ -105,9 +110,9 @@ private:
 	float fitness = 0;
 	std::vector<int> chromosomes;
 };
-void draw_path(agent& a, sf::RenderTarget& rt)
+void draw_path(agent &a, sf::RenderTarget &rt)
 {
-	auto& path = a.getChromosomes();
+	auto &path = a.getChromosomes();
 	for (int i = 0; i < LEN_CITIES - 1; i++)
 	{
 		auto originCity = cities[path[i]];
@@ -127,10 +132,15 @@ int main()
 	std::vector<agent> population;
 	window.setVerticalSyncEnabled(true);
 	sf::Clock clock;
+	float xcenter = WIDTH / 2;
+	float ycenter = HEIGHT / 2;
+	float alpha = 0;
+	float da = 2 * M_PI / float(LEN_CITIES); 
 	for (int i = 0; i < LEN_CITIES; i++)
 	{
-		float x = get_rnd(CITY_RADIUS, WIDTH - CITY_RADIUS);
-		float y = get_rnd(CITY_RADIUS, HEIGHT - CITY_RADIUS);
+		float x = 300 * cos(alpha) + xcenter;
+		float y = 300 * sin(alpha) + ycenter;
+		alpha += da;
 		cities.push_back(city(x, y));
 	}
 	for (int i = 0; i < POPULATION; i++)
@@ -138,7 +148,7 @@ int main()
 		population.push_back(agent());
 	}
 	sf::Font font;
-	font.loadFromFile("C:\\Users\\isaig\\Downloads\\Arial.ttf");
+	font.loadFromFile("Arial.ttf");
 	sf::Text hud;
 	hud.setFont(font);
 	hud.setPosition(10, 10);
@@ -154,11 +164,10 @@ int main()
 				break;
 			}
 		}
-		std::sort(population.begin(), population.end(), [](agent& a1, agent& a2) {
-			return a1.getFitness() < a2.getFitness();
-			});
-		
-		int parents = get_rnd(10, 50);
+		std::sort(population.begin(), population.end(), [](agent &a1, agent &a2)
+				  { return a1.getFitness() < a2.getFitness(); });
+
+		int parents = get_rnd(20, 50);
 		for (int i = 0; i < parents; i++)
 		{
 			population.pop_back();
@@ -166,12 +175,9 @@ int main()
 		std::vector<agent> newAgents;
 		for (int i = 0, j = 0; i < parents; i++, j += 2)
 		{
-			agent a;
-			if (rand() & 1)
-			{
-				a = agent(population[j], population[j + 1]);
-			}else a = agent(population[j + 1], population[j]);
-			if (rand() % 6 < 3) a.mutate();
+			agent a(population[j], population[j + 1]);	
+			if (rand() % 6 < 3)
+				a.mutate();
 			newAgents.push_back(a);
 		}
 		for (int i = 0; i < parents; i++)
@@ -183,7 +189,7 @@ int main()
 		char msg[64];
 		snprintf(msg, sizeof(msg), "distancia total actual %.4f", population[0].getFitness());
 		hud.setString(msg);
-		for (auto& c : cities)
+		for (auto &c : cities)
 		{
 			c.render(window);
 		}
