@@ -42,7 +42,17 @@ public:
     }
     void render(sf::RenderTarget &rt)
     {
-
+        if (showBoundingBox)
+        {
+            sf::RectangleShape rect;
+            float size = 17;
+            rect.setSize({size, size});
+            rect.setFillColor(sf::Color::Transparent);
+            rect.setOutlineColor(sf::Color::Blue);
+            rect.setOutlineThickness(1.0f);
+            rect.setPosition({pos.x - size / 2, pos.y - size / 2});
+            rt.draw(rect);
+        }
         if (category == Category::Circle)
         {
             sf::CircleShape circle(CIRCLE_RADIUS);
@@ -57,17 +67,6 @@ public:
             rect.setSize({CIRCLE_RADIUS, CIRCLE_RADIUS});
             rect.setFillColor(sf::Color::Red);
             rect.setPosition({pos.x - CIRCLE_RADIUS / 2, pos.y - CIRCLE_RADIUS / 2});
-            rt.draw(rect);
-        }
-        if (showBoundingBox)
-        {
-            sf::RectangleShape rect;
-            float size = 17;
-            rect.setSize({size, size});
-            rect.setFillColor(sf::Color::Transparent);
-            rect.setOutlineColor(sf::Color::Blue);
-            rect.setOutlineThickness(0.4f);
-            rect.setPosition({pos.x - size / 2, pos.y - size / 2});
             rt.draw(rect);
         }
     }
@@ -114,7 +113,7 @@ public:
 };
 void knn(std::vector<point> &dataSet)
 {
-    std::priority_queue<point *, std::vector<point *>, comparator> heap;
+    std::priority_queue<point*, std::vector<point*>, comparator> heap;
     for (auto &point : dataSet)
     {
         heap.push(&point);
