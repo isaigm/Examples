@@ -10,7 +10,6 @@
 #define POPULATION 200
 #define WIDTH 1280
 #define HEIGHT 720
-
 class city
 {
 public:
