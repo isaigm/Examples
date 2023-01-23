@@ -175,20 +175,6 @@ int main(int argc, char* argv[])
    
 
     std::cout << clBuildProgram(program, 0, NULL, NULL, NULL, NULL) << "\n";
-    if (1) {
-        // Determine the size of the log
-        size_t log_size;
-        clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
-
-        // Allocate memory for the log
-        char* log = (char*)malloc(log_size);
-
-        // Get the log
-        clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
-
-        // Print the log
-        printf("%s\n", log);
-    }
     kernel = clCreateKernel(program, "perform_step", &err);
    
     program2 = clCreateProgramWithSource(context, 1, (const char**)&mtp, NULL, &err);
