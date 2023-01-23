@@ -7,12 +7,11 @@
 #include <CL/opencl.h>
 #include <fstream>
 #include <sstream>
+#include <iostream>
+#define COLS 1920
+#define ROWS 1080
 
-#define MAX_SIZE 0x10000
-#define COLS 800
-#define ROWS 600
-
-void fill_random(uint8_t *cells)
+void fill_random(uint8_t* cells)
 {
     for (int i = 0; i < ROWS * COLS; i++)
     {
@@ -20,14 +19,14 @@ void fill_random(uint8_t *cells)
     }
     cells[0] = 1;
 }
-void load_pattern(uint8_t *cells, const char *file, int start_row, int start_col)
+void load_pattern(uint8_t* cells, const char* file, int start_row, int start_col)
 {
     std::ifstream ifs;
     ifs.open(file);
     if (!ifs.is_open())
         exit(1);
 
-    auto fill_row = [](uint8_t *cells, int state, int row, int col, int reps)
+    auto fill_row = [](uint8_t* cells, int state, int row, int col, int reps)
     {
         for (int i = col; i < col + reps; i++)
         {
@@ -37,7 +36,7 @@ void load_pattern(uint8_t *cells, const char *file, int start_row, int start_col
     int row = start_row;
     int col = start_col;
 
-    auto decode = [&row, &col, &fill_row, start_col, start_row](uint8_t *cells, char ch, int reps)
+    auto decode = [&row, &col, &fill_row, start_col, start_row](uint8_t* cells, char ch, int reps)
     {
         switch (ch)
         {
@@ -62,7 +61,7 @@ void load_pattern(uint8_t *cells, const char *file, int start_row, int start_col
         std::string line;
         std::getline(ifs, line);
         std::string number;
-        for (auto &ch : line)
+        for (auto& ch : line)
         {
             if (std::isdigit(ch))
                 number.push_back(ch);
@@ -79,55 +78,76 @@ void load_pattern(uint8_t *cells, const char *file, int start_row, int start_col
         }
     }
 }
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     auto mtp = "__kernel void map_to_pixels(__global unsigned char *cells, __global unsigned char *pixels, int rows, int cols)\n"
-               "{\n"
-               "\n"
-               "    int i = get_global_id(0);\n"
-               "    int j = get_global_id(1);\n"
-               "    if(i >= rows || j >= cols) return;\n"
-               "    int cell = cells[j + i * cols];\n"
-               "    if (cell)\n"
-               "    {\n"
-               "        pixels[(j + i * cols) * 4] = 0;\n"
-               "        pixels[(j + i * cols) * 4 + 1] = 0;\n"
-               "        pixels[(j + i * cols) * 4 + 2] = 0;\n"
-               "        pixels[(j + i * cols) * 4 + 3] = 0;\n"
-               "    }\n"
-               "    else\n"
-               "    {\n"
-               "        pixels[(j + i * cols) * 4] = 255;\n"
-               "        pixels[(j + i * cols) * 4 + 1] = 255;\n"
-               "        pixels[(j + i * cols) * 4 + 2] = 255;\n"
-               "        pixels[(j + i * cols) * 4 + 3] = 255;\n"
-               "    }\n"
-               "}";
-
-    FILE *fp = fopen("kernel.cl", "r");
-    if (fp == NULL)
-    {
-        exit(1);
-    }
+        "{\n"
+        "\n"
+        "    int i = get_global_id(0);\n"
+        "    int j = get_global_id(1);\n"
+        "    if(i >= rows || j >= cols) return;\n"
+        "    int cell = cells[j + i * cols];\n"
+        "    if (cell)\n"
+        "    {\n"
+        "        pixels[(j + i * cols) * 4] = 0;\n"
+        "        pixels[(j + i * cols) * 4 + 1] = 0;\n"
+        "        pixels[(j + i * cols) * 4 + 2] = 0;\n"
+        "        pixels[(j + i * cols) * 4 + 3] = 0;\n"
+        "    }\n"
+        "    else\n"
+        "    {\n"
+        "        pixels[(j + i * cols) * 4] = 255;\n"
+        "        pixels[(j + i * cols) * 4 + 1] = 255;\n"
+        "        pixels[(j + i * cols) * 4 + 2] = 255;\n"
+        "        pixels[(j + i * cols) * 4 + 3] = 255;\n"
+        "    }\n"
+        "}";
+    auto kernelSource = "__kernel void perform_step(__global unsigned char *cells, __global unsigned char *tempCells, int rows, int cols)\n"
+        "{\n"
+        "    int row = get_global_id(0);\n"
+        "    int col = get_global_id(1);\n"
+        "    if(row >= rows || col >= cols) return;\n"
+        "    int alive_neighbours = 0;\n"
+        "    for(int i = row - 1; i <= row + 1; i++)\n"
+        "    {\n"
+        "        for(int j = col - 1; j <= col + 1; j++)\n"
+        "        {\n"
+        "            if(row == i && col == j) continue;\n"
+        "            if(i < 0 || j < 0 || j >= cols || i >= rows) continue;\n"
+        "            alive_neighbours += cells[j + i * cols];\n"
+        "        }\n"
+        "    }\n"
+        "    if(cells[col + row * cols])\n"
+        "    {\n"
+        "        if(alive_neighbours == 2 || alive_neighbours == 3)\n"
+        "        {\n"
+        "            tempCells[col + row * cols] = 1;\n"
+        "        }else{\n"
+        "            tempCells[col + row * cols] = 0;\n"
+        "\n"
+        "        }\n"
+        "    }else{\n"
+        "        tempCells[col + row * cols] = alive_neighbours == 3;\n"
+        "    }\n"
+        "}";
     srand(time(nullptr));
     sf::RenderWindow window(sf::VideoMode(COLS, ROWS), "GoL");
     window.setVerticalSyncEnabled(true);
     unsigned int rows = ROWS;
     unsigned int cols = COLS;
     size_t ncells = ROWS * COLS * sizeof(uint8_t);
-    char *kernelSource = (char *)malloc(sizeof(char) * MAX_SIZE);
-    fread(kernelSource, 1, MAX_SIZE, fp);
+    
 
-    uint8_t *hostCells;
-    uint8_t *tempHostCells;
-    hostCells = (uint8_t *)malloc(ncells);
-    tempHostCells = (uint8_t *)malloc(ncells);
+    uint8_t* hostCells;
+    uint8_t* tempHostCells;
+    hostCells = (uint8_t*)malloc(ncells);
+    tempHostCells = (uint8_t*)malloc(ncells);
 
     cl_mem devCells;
     cl_mem devTempCells;
     memset(hostCells, 0, ncells);
-    load_pattern(hostCells, "pattern.rle", 100, 100);
-    // fill_random(hostCells);
+    //load_pattern(hostCells, "pattern.rle", 100, 100);
+    fill_random(hostCells);
     memcpy(tempHostCells, hostCells, ncells);
 
     cl_platform_id cpPlatform;    // OpenCL platform
@@ -137,7 +157,7 @@ int main(int argc, char *argv[])
     cl_program program, program2; // program
     cl_kernel kernel;             // kernel
     cl_kernel kernel2;
-    size_t *globalSize = (size_t *)malloc(sizeof(size_t) * 2);
+    size_t* globalSize = (size_t*)malloc(sizeof(size_t) * 2);
     globalSize[0] = ROWS;
     globalSize[1] = COLS;
     cl_int err;
@@ -151,23 +171,39 @@ int main(int argc, char *argv[])
     // Create a command queue
     queue = clCreateCommandQueueWithProperties(context, device_id, 0, &err);
 
-    program = clCreateProgramWithSource(context, 1, (const char **)&kernelSource, NULL, &err);
-    clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-    kernel = clCreateKernel(program, "perform_step", &err);
+    program = clCreateProgramWithSource(context, 1, (const char**)&kernelSource, NULL, &err);
+   
 
-    program2 = clCreateProgramWithSource(context, 1, (const char **)&mtp, NULL, &err);
+    std::cout << clBuildProgram(program, 0, NULL, NULL, NULL, NULL) << "\n";
+    if (1) {
+        // Determine the size of the log
+        size_t log_size;
+        clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+
+        // Allocate memory for the log
+        char* log = (char*)malloc(log_size);
+
+        // Get the log
+        clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
+
+        // Print the log
+        printf("%s\n", log);
+    }
+    kernel = clCreateKernel(program, "perform_step", &err);
+   
+    program2 = clCreateProgramWithSource(context, 1, (const char**)&mtp, NULL, &err);
     clBuildProgram(program2, 0, NULL, NULL, NULL, NULL);
     kernel2 = clCreateKernel(program2, "map_to_pixels", &err);
-
+    
     sf::Texture texture;
     sf::Sprite sprite;
     sf::Font font;
-    font.loadFromFile("Minecraft.ttf"); // best font
+    font.loadFromFile("C:\\Users\\isaig\\Downloads\\fuente.ttf"); // best font
     sf::Text text;
     text.setFont(font);
     texture.create(COLS, ROWS);
     sprite.setTexture(texture);
-    sf::Uint8 *pixels = new sf::Uint8[ROWS * COLS * 4];
+    sf::Uint8* pixels = new sf::Uint8[ROWS * COLS * 4];
 
     texture.update(pixels);
 
