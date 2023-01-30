@@ -466,6 +466,22 @@ int main()
         window.draw(sprite);
         window.display();
     }
-
+    clReleaseMemObject(devCells);
+    clReleaseMemObject(devNextCells);
+    clReleaseMemObject(devCoords1);
+    clReleaseMemObject(devCoords2);
+    clReleaseMemObject(devPixels);
+    clReleaseProgram(mtpProgram);
+    clReleaseKernel(mtpKernel);
+    clReleaseProgram(stepProgram);
+    clReleaseKernel(stepKernel);
+    clReleaseCommandQueue(queue);
+    clReleaseContext(context);
+    delete[] globalSize;
+    delete[] cells;
+    delete[] next_cells;
+    delete[] pixels;
+    delete[] hCoords1;
+    delete[] hCoords2;
     return 0;
 }
