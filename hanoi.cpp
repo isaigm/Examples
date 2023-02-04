@@ -6,10 +6,11 @@
 #define WIDTH 800
 #define HEIGHT 600
 #define TOWER_WIDTH 20
-#define N 3
-class Block : public sf::RectangleShape {
+#define N 5
+class Block : public sf::RectangleShape
+{
 public:
-    Block(float width, float height) : sf::RectangleShape({ width, height }) {}
+    Block(float width, float height) : sf::RectangleShape({width, height}) {}
     void setRandomColor()
     {
         sf::Color color;
@@ -22,7 +23,7 @@ public:
     {
         float w = getSize().x;
         float h = getSize().y;
-        setPosition({ center.x - w / 2, center.y - h / 2 });
+        setPosition({center.x - w / 2, center.y - h / 2});
     }
     int cameFrom = 0;
 };
@@ -31,7 +32,7 @@ class Tower
 public:
     Tower(float x, float y)
     {
-        mTower.setSize({ TOWER_WIDTH, 200 });
+        mTower.setSize({TOWER_WIDTH, 200});
         mTower.setPosition(x, y);
         mTower.setFillColor(sf::Color::White);
         mNextBlockPos.x = mTower.getPosition().x + mTower.getSize().x / 2;
@@ -41,10 +42,10 @@ public:
     {
         return mBlocks.size();
     }
-    void render(sf::RenderTarget& rt)
+    void render(sf::RenderTarget &rt)
     {
         rt.draw(mTower);
-        for (auto& block : mBlocks)
+        for (auto &block : mBlocks)
         {
             rt.draw(block);
         }
@@ -54,7 +55,7 @@ public:
         int width = 150;
         for (int i = 0; i < N; i++)
         {
-            Block block(width, mBlockHeight );
+            Block block(width, mBlockHeight);
             block.setRandomColor();
             block.setCenterAt(mNextBlockPos);
             mBlocks.push_back(block);
@@ -64,14 +65,11 @@ public:
     }
     int canPickBlock(sf::Vector2f mousePos)
     {
-        for (size_t i = 0; i < mBlocks.size(); i++)
+        if (mBlocks.size() > 0 && mBlocks.back().getGlobalBounds().contains(mousePos.x, mousePos.y))
         {
-            auto &block = mBlocks[i];
-            if (block.getGlobalBounds().contains(mousePos.x, mousePos.y) && i == mBlocks.size() - 1)
-            {
-                return i;
-            }
+            return mBlocks.size() - 1;
         }
+
         return -1;
     }
     Block *getBlock(int idx)
@@ -82,11 +80,11 @@ public:
     {
         if (mTower.getGlobalBounds().intersects(block.getGlobalBounds()))
         {
-            if (mBlocks.size() == 0) return true;
+            if (mBlocks.size() == 0)
+                return true;
             return block.getSize().x <= mBlocks.back().getSize().x;
         }
         return false;
-    
     }
     void insertBlock(Block &block)
     {
@@ -106,9 +104,10 @@ public:
     {
         if (mBlocks.size() > 0)
         {
-            mBlocks.back().setCenterAt({ mNextBlockPos.x, mNextBlockPos.y + mBlockHeight });
+            mBlocks.back().setCenterAt({mNextBlockPos.x, mNextBlockPos.y + mBlockHeight});
         }
     }
+
 private:
     const float mBlockHeight = 25;
     std::vector<Block> mBlocks;
@@ -116,7 +115,8 @@ private:
     sf::RectangleShape mTower;
 };
 
-class Game {
+class Game
+{
 public:
     Game() : mWindow(sf::VideoMode(WIDTH, HEIGHT), "Torres de Hanoi")
     {
@@ -127,7 +127,8 @@ public:
         mTowers.push_back(Tower(2 * TOWER_WIDTH + 3 * x, HEIGHT / 2));
         mTowers[mStartTower].populate();
     }
-    void run() {
+    void run()
+    {
         while (mWindow.isOpen())
         {
             mMousePos = mWindow.mapPixelToCoords(sf::Mouse::getPosition(mWindow));
@@ -137,11 +138,13 @@ public:
             render();
         }
     }
+
 private:
     void handleEvents()
     {
         sf::Event ev;
-        while (mWindow.pollEvent(ev)) {
+        while (mWindow.pollEvent(ev))
+        {
             switch (ev.type)
             {
             case sf::Event::Closed:
@@ -155,19 +158,17 @@ private:
                 else
                 {
                     placeBlock();
-               
                 }
                 break;
             default:
                 break;
             }
-            
         }
     }
     void render()
     {
         mWindow.clear(sf::Color::Black);
-        for (auto& t : mTowers)
+        for (auto &t : mTowers)
         {
             t.render(mWindow);
         }
@@ -238,7 +239,7 @@ private:
     int mMoves = 0;
     bool mGameOver = false;
     sf::RenderWindow mWindow;
-    Block* mSelectedBlock = nullptr;
+    Block *mSelectedBlock = nullptr;
     std::vector<Tower> mTowers;
     sf::Vector2f mMousePos;
 };
