@@ -60,7 +60,7 @@ int main()
     sf::Image image;
     image.loadFromFile("C:\\Users\\isaig\\Downloads\\test.jpg");
     int sizeOfImage = image.getSize().x * image.getSize().y * 4 * sizeof(uint8_t);
-    uint8_t *outputPixels = new uint8_t[sizeOfImage];
+    uint8_t *outputPixels = new uint8_t[image.getSize().x * image.getSize().y * 4];
     cl::Buffer bufferPixels(context, CL_MEM_READ_ONLY, sizeOfImage);
     cl::Buffer bufferOutputPixels(context, CL_MEM_READ_WRITE, sizeOfImage);
     
