@@ -8,7 +8,7 @@ static const int HEIGHT = 1080;
 static const int w = 256;
 static const int TW = 100;
 static const int TH = 100;
-static sf::Vector2i WORLD_SIZE = {99, 99};
+static sf::Vector2i WORLD_SIZE = { 99, 99 };
 static const float M_PI = 3.14159f;
 static const float CAM_SPEED = 250.0f;
 float fade(float t)
@@ -77,7 +77,7 @@ public:
         float v = fade(yf);
 
         return lerp(u, lerp(v, dotBottomLeft, dotTopLeft),
-                    lerp(v, dotBottomRight, dotTopRight));
+            lerp(v, dotBottomRight, dotTopRight));
     }
 
 private:
@@ -89,10 +89,10 @@ private:
 class tile
 {
 public:
-    tile(sf::Texture &text, int i, int j)
+    tile(sf::Texture& text, int i, int j)
     {
         sprite.setTexture(text);
-        sprite.setTextureRect({j * TW, i * TH, TW, TH});
+        sprite.setTextureRect({ j * TW, i * TH, TW, TH });
         sprite.scale(0.2, 0.2);
     }
     void setGridPos(int i, int j)
@@ -104,7 +104,7 @@ public:
     {
         return gridPos;
     }
-    void render(sf::RenderTarget &rt)
+    void render(sf::RenderTarget& rt)
     {
         rt.draw(sprite);
     }
@@ -114,7 +114,7 @@ public:
     }
     void setTile(int i, int j)
     {
-        sprite.setTextureRect({j * TW, i * TH, TW, TH});
+        sprite.setTextureRect({ j * TW, i * TH, TW, TH });
     }
     void setColor(sf::Color c)
     {
@@ -129,12 +129,12 @@ sf::Vector2i invert(float x, float y, float h, float w, float a, float b)
 {
     float ri = (2 / h) * (y - b) - (x - a) * (1 / w);
     float rj = (4 / h) * (y - b) - ri;
-    return {int(rj), int(ri)};
+    return { int(rj), int(ri) };
 }
 class chunk
 {
 public:
-    std::vector<tile> &getWorld()
+    std::vector<tile>& getWorld()
     {
         return world;
     }
@@ -152,35 +152,36 @@ public:
                 addTile(i, j);
             }
         }
-        genWorld();
+        genWorld(WORLD_SIZE.y * WORLD_SIZE.x);
     }
     sf::Vector2f getCenter()
     {
-        auto &t = world[world.size() / 2];
+        auto& t = world[world.size() / 2];
         int i = t.getGridPos().y;
         int j = t.getGridPos().x;
         float rx = (j - i) * float(20) / 2.0f;
         float ry = (j + i) * float(20) / 4.0f;
-        return {rx, ry};
+        return { rx, ry };
     }
-    void render(sf::RenderTarget &rt)
+    void render(sf::RenderTarget& rt)
     {
-        for (auto &t : world)
+        for (auto& t : world)
         {
             t.render(rt);
         }
     }
     void moveRight()
     {
-        auto it = std::remove_if(world.begin(), world.end(), [=](tile &t)
-                                 {
-            int i = t.getGridPos().y;
-            int j = t.getGridPos().x;
-            int lastRow = firstRow + WORLD_SIZE.y - 1;
-            return i == lastRow || j == firstCol; });
+        auto it = std::remove_if(world.begin(), world.end(), [=](tile& t)
+            {
+                int i = t.getGridPos().y;
+        int j = t.getGridPos().x;
+        int lastRow = firstRow + WORLD_SIZE.y - 1;
+        return i == lastRow || j == firstCol; });
         world.erase(it, world.end());
         firstCol++;
         firstRow--;
+        int size = 0;
         for (int i = firstCol; i < firstCol + WORLD_SIZE.x; i++)
         {
             addTile(firstRow, i);
@@ -189,17 +190,17 @@ public:
         {
             addTile(i, firstCol + WORLD_SIZE.x - 1);
         }
-        genWorld();
+        genWorld(WORLD_SIZE.x + WORLD_SIZE.y - 1);
         sortTiles();
     }
     void moveLeft()
     {
-        auto it = std::remove_if(world.begin(), world.end(), [=](tile &t)
-                                 {
-            int i = t.getGridPos().y;
-            int j = t.getGridPos().x;
-            int lastCol = firstCol + WORLD_SIZE.x - 1;
-            return i == firstRow || j == lastCol; });
+        auto it = std::remove_if(world.begin(), world.end(), [=](tile& t)
+            {
+                int i = t.getGridPos().y;
+        int j = t.getGridPos().x;
+        int lastCol = firstCol + WORLD_SIZE.x - 1;
+        return i == firstRow || j == lastCol; });
         world.erase(it, world.end());
         firstCol--;
         firstRow++;
@@ -211,18 +212,18 @@ public:
         {
             addTile(firstRow + WORLD_SIZE.y - 1, i);
         }
+        genWorld(WORLD_SIZE.x + WORLD_SIZE.y - 1);
         sortTiles();
-        genWorld();
     }
     void moveUp()
     {
-        auto it = std::remove_if(world.begin(), world.end(), [=](tile &t)
-                                 {
-            int i = t.getGridPos().y;
-            int j = t.getGridPos().x;
-            int lastCol = firstCol + WORLD_SIZE.x - 1;
-            int lastRow = firstRow + WORLD_SIZE.y - 1;
-            return i == lastRow || j == lastCol; });
+        auto it = std::remove_if(world.begin(), world.end(), [=](tile& t)
+            {
+                int i = t.getGridPos().y;
+        int j = t.getGridPos().x;
+        int lastCol = firstCol + WORLD_SIZE.x - 1;
+        int lastRow = firstRow + WORLD_SIZE.y - 1;
+        return i == lastRow || j == lastCol; });
         world.erase(it, world.end());
         firstCol--;
         firstRow--;
@@ -234,16 +235,16 @@ public:
         {
             addTile(firstRow, i);
         }
+        genWorld(WORLD_SIZE.x + WORLD_SIZE.y - 1);
         sortTiles();
-        genWorld();
     }
     void moveDown()
     {
-        auto it = std::remove_if(world.begin(), world.end(), [=](tile &t)
-                                 {
-            int i = t.getGridPos().y;
-            int j = t.getGridPos().x;
-            return i == firstRow || j == firstCol; });
+        auto it = std::remove_if(world.begin(), world.end(), [=](tile& t)
+            {
+                int i = t.getGridPos().y;
+        int j = t.getGridPos().x;
+        return i == firstRow || j == firstCol; });
         world.erase(it, world.end());
         firstRow++;
         for (int i = firstRow; i < firstRow + WORLD_SIZE.y - 1; i++)
@@ -255,8 +256,8 @@ public:
         {
             addTile(firstRow + WORLD_SIZE.y - 1, i);
         }
+        genWorld(WORLD_SIZE.x + WORLD_SIZE.y - 1);
         sortTiles();
-        genWorld();
     }
 
 private:
@@ -267,9 +268,9 @@ private:
     }
     void sortTiles()
     {
-        std::sort(world.begin(), world.end(), [](tile &t1, tile &t2)
-                  {
-            auto pos1 = t1.getGridPos();
+        std::sort(world.begin(), world.end(), [](tile& t1, tile& t2)
+            {
+                auto pos1 = t1.getGridPos();
         auto pos2 = t2.getGridPos();
         if (pos1.y == pos2.y) return pos1.x < pos2.x;
         return pos1.y < pos2.y; });
@@ -279,19 +280,20 @@ private:
     std::vector<tile> world;
     perlin_noise noise;
     sf::Texture tiles;
-    void genWorld()
+    void genWorld(int size)
     {
-        float min = 100000;
-        float max = 0;
-        for (auto &t : world)
+
+        for (int k = world.size() - 1; k >= 0; k--)
         {
+
+            auto& t = world[k];
             int i = t.getGridPos().y;
             int j = t.getGridPos().x;
             float sum = 0;
 
             float a = 1.0f;
             float f = 0.06f;
-            for (int k = 0; k < 6; k++)
+            for (int k = 0; k < 2; k++)
             {
                 float xx = j * f;
                 float yy = i * f;
@@ -303,13 +305,12 @@ private:
             }
             sum += 1.0f;
             sum *= 0.5f;
-            min = std::min(min, sum);
-            max = std::max(max, sum);
+           
             float rx = 0;
             float ry = 0;
-
+            int h = int(sum * 6);
             rx = (j - i) * float(20) / 2.0f;
-            ry = (j + i) * float(20) / 4.0f;
+            ry = (j + i) * float(20) / 4.0f + h * 10;
 
             t.setPos(rx, ry);
 
@@ -323,7 +324,12 @@ private:
                 color = sf::Color::Blue;
 
             t.setColor(color);
+
+
+            size--;
+            if (size <= 0) break;
         }
+       
     }
 };
 
