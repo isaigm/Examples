@@ -39,9 +39,47 @@ public:
     {
         rt.draw(points);
     }
+private:
+    sf::VertexArray points;
+};
+class Ray
+{
+public:
+    Ray(sf::Vector2f start, sf::Vector2f end) : points(sf::LinesStrip, 2)
+    {
+        points[0].position = start;
+        points[1].position = end;
+        points[0].color = sf::Color::Red;
+        points[1].color = sf::Color::Red;
+    }
+    Ray() : points(sf::LinesStrip, 2)
+    {
+        points[0].color = sf::Color::Red;
+        points[1].color = sf::Color::Red;
+    }
+    sf::Vector2f getEndPoint()
+    {
+        return points[1].position;
+    }
+    void setStartPoint(sf::Vector2f point)
+    {
+        points[0].position = point;
+    }
+    void setEndPoint(sf::Vector2f point)
+    {
+        points[1].position = point;
+    }
+    void render(sf::RenderTarget &rt)
+    {
+        rt.draw(points);
+    }
 
 private:
     sf::VertexArray points;
+};
+enum RobotState {
+    WORKING,
+    STOP
 };
 class Robot
 {
@@ -84,9 +122,11 @@ public:
         float dir = atan(m);
         if (dist < 5)
         {
+            state = STOP;
             stop();
             return;
         }
+        state = WORKING;
         if (target.x < center.x)
         {
             dir += M_PI;
@@ -101,13 +141,14 @@ public:
             f2 += 2 * M_PI;
         float vv1 = std::abs(f1 - dir);
         float vv2 = std::abs(f2 - dir);
-        if (vv2 < vv1)
+        printf("vv1: %f, vv2: %f,angle between: %f, robot angle:%f, dir %f, dt: %f\n", vv1, vv2, angleBetween, robotAngle, dir, robotAngle - angleBetween);
+        if (vv2 < vv1 || std::abs(robotAngle - angleBetween) < 0.01f)
         {
             clockwise();
         }
         else
             anticlockwise();
-        if (angleBetween < 0.06f)
+        if (angleBetween < 0.01f)
         {
             forward();
         }
@@ -139,7 +180,10 @@ public:
         body.setPosition(center);
         core.setPosition(center);
     }
-
+    RobotState getCurrState()
+    {
+        return state;
+    }
 private:
     void forward()
     {
@@ -148,8 +192,8 @@ private:
     }
     void clockwise()
     {
-        rotVelLeft = 5;
-        rotVelRight = -5;
+        rotVelLeft = 7;
+        rotVelRight = -7;
     }
     void stop()
     {
@@ -158,8 +202,8 @@ private:
     }
     void anticlockwise()
     {
-        rotVelLeft = -5;
-        rotVelRight = 5;
+        rotVelLeft = -7;
+        rotVelRight = 7;
     }
     void updateWheelsPosition()
     {
@@ -182,11 +226,11 @@ private:
     float vx = 0;
     float vy = 0;
     float currAngleWheels = 0;
-    sf::Vector2f lastTarget;
     // change this
     float rotVelLeft = 0;
     float rotVelRight = 0;
-    float robotAngle = M_PI / 4;
+    float robotAngle = M_PI ;
+    RobotState state = WORKING;
 
 };
 int main()
