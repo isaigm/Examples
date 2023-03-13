@@ -3,7 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <math.h>
 
-static const int SAMPLE_RATE = 441000;
+static const int SAMPLE_RATE = 44100;
 static const int WIDTH = 400;
 static const int HEIGHT = 150;
 static const int KEYS = 7;
