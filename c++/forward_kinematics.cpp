@@ -8,40 +8,7 @@
 #define CORE_RADIUS 5
 #define M_PI 3.14159f
 
-class Ray
-{
-public:
-    Ray(sf::Vector2f start, sf::Vector2f end) : points(sf::LinesStrip, 2)
-    {
-        points[0].position = start;
-        points[1].position = end;
-        points[0].color = sf::Color::Red;
-        points[1].color = sf::Color::Red;
-    }
-    Ray() : points(sf::LinesStrip, 2)
-    {
-        points[0].color = sf::Color::Red;
-        points[1].color = sf::Color::Red;
-    }
-    sf::Vector2f getEndPoint()
-    {
-        return points[1].position;
-    }
-    void setStartPoint(sf::Vector2f point)
-    {
-        points[0].position = point;
-    }
-    void setEndPoint(sf::Vector2f point)
-    {
-        points[1].position = point;
-    }
-    void render(sf::RenderTarget& rt)
-    {
-        rt.draw(points);
-    }
-private:
-    sf::VertexArray points;
-};
+
 class Ray
 {
 public:
@@ -77,7 +44,8 @@ public:
 private:
     sf::VertexArray points;
 };
-enum RobotState {
+enum RobotState
+{
     WORKING,
     STOP
 };
@@ -86,18 +54,18 @@ class Robot
 public:
     Robot(sf::Vector2f pos) : body(RADIUS), leftWheel(WHEEL_RADIUS), rightWheel(WHEEL_RADIUS), core(CORE_RADIUS), center(pos)
     {
-        body.setOrigin({ RADIUS, RADIUS });
+        body.setOrigin({RADIUS, RADIUS});
         body.setPosition(pos);
         body.setFillColor(sf::Color::Transparent);
         body.setOutlineColor(sf::Color::Blue);
-        core.setOrigin({ CORE_RADIUS, CORE_RADIUS });
+        core.setOrigin({CORE_RADIUS, CORE_RADIUS});
         core.setPosition(center);
         core.setFillColor(sf::Color::Blue);
         body.setOutlineThickness(2.0f);
         leftWheel.setFillColor(sf::Color::White);
-        leftWheel.setOrigin({ WHEEL_RADIUS, WHEEL_RADIUS });
+        leftWheel.setOrigin({WHEEL_RADIUS, WHEEL_RADIUS});
         rightWheel.setFillColor(sf::Color::White);
-        rightWheel.setOrigin({ WHEEL_RADIUS, WHEEL_RADIUS });
+        rightWheel.setOrigin({WHEEL_RADIUS, WHEEL_RADIUS});
         currAngleWheels = robotAngle - M_PI / 2;
         updateWheelsPosition();
         updateRayPosition();
@@ -109,14 +77,13 @@ public:
         float tCenter = (HEIGHT - center.y);
         float dy = tTarget - tCenter;
         float dist = sqrt(dx * dx + dy * dy);
-        sf::Vector2f v1 = { target.x - center.x, target.y - center.y };
-        sf::Vector2f v2 = { ray.getEndPoint().x - center.x, ray.getEndPoint().y - center.y };
+        sf::Vector2f v1 = {target.x - center.x, target.y - center.y};
+        sf::Vector2f v2 = {ray.getEndPoint().x - center.x, ray.getEndPoint().y - center.y};
         float dotProduct = v1.x * v2.x + v1.y * v2.y;
         float lenV1 = sqrt(v1.x * v1.x + v1.y * v1.y);
         float lenV2 = sqrt(v2.x * v2.x + v2.y * v2.y);
         float angleBetween = acos(dotProduct / (lenV1 * lenV2));
-        lastTarget = target;
-        float f1 = robotAngle + angleBetween; //para determinar en que sentido debe girar el robot
+        float f1 = robotAngle + angleBetween; // para determinar en que sentido debe girar el robot
         float f2 = robotAngle - angleBetween;
         float m = dy / dx;
         float dir = atan(m);
@@ -153,7 +120,7 @@ public:
             forward();
         }
     }
-    void render(sf::RenderTarget& rt)
+    void render(sf::RenderTarget &rt)
     {
         rt.draw(body);
         rt.draw(leftWheel);
@@ -184,6 +151,7 @@ public:
     {
         return state;
     }
+
 private:
     void forward()
     {
@@ -207,13 +175,13 @@ private:
     }
     void updateWheelsPosition()
     {
-        rightWheel.setPosition({ center.x + RADIUS * cos(currAngleWheels), center.y - RADIUS * sin(currAngleWheels) });
-        leftWheel.setPosition({ center.x - RADIUS * cos(currAngleWheels), center.y + RADIUS * sin(currAngleWheels) });
+        rightWheel.setPosition({center.x + RADIUS * cos(currAngleWheels), center.y - RADIUS * sin(currAngleWheels)});
+        leftWheel.setPosition({center.x - RADIUS * cos(currAngleWheels), center.y + RADIUS * sin(currAngleWheels)});
     }
     void updateRayPosition()
     {
-        ray.setStartPoint({ center.x + RADIUS * cos(robotAngle), center.y + RADIUS * sin(-robotAngle) });
-        ray.setEndPoint({ center.x + rayLen * RADIUS * cos(robotAngle), center.y + rayLen * RADIUS * sin(-robotAngle) });
+        ray.setStartPoint({center.x + RADIUS * cos(robotAngle), center.y + RADIUS * sin(-robotAngle)});
+        ray.setEndPoint({center.x + rayLen * RADIUS * cos(robotAngle), center.y + rayLen * RADIUS * sin(-robotAngle)});
     }
     sf::CircleShape body;
     sf::CircleShape leftWheel;
@@ -229,16 +197,15 @@ private:
     // change this
     float rotVelLeft = 0;
     float rotVelRight = 0;
-    float robotAngle = M_PI ;
+    float robotAngle = M_PI;
     RobotState state = WORKING;
-
 };
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "");
     window.setVerticalSyncEnabled(true);
     sf::Clock clock;
-    Robot robot({ WIDTH / 2.0f - 100, HEIGHT / 2.0f });
+    Robot robot({WIDTH / 2.0f - 100, HEIGHT / 2.0f});
     sf::Vector2f mousePos;
     bool canGo = false;
     while (window.isOpen())
