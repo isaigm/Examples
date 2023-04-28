@@ -1,0 +1,243 @@
+#include <iostream>
+#include <vector>
+#include <SFML/Graphics.hpp>
+#include <map>
+#include <sstream>
+#define MAP_WIDTH 10
+#define MAP_HEIGHT 10
+#define DIM 80
+static const float start_pheromones = 0.1f;
+static const float rho = 0.1f;
+bool visited[MAP_HEIGHT][MAP_WIDTH];
+static const int n_ants = 50;
+static const float q = 1;
+struct edge
+{
+    float pheremones = start_pheromones;
+    float h = 0;
+};
+std::map<std::string, edge> all_edges;
+
+std::string get_key(sf::Vector2i origin, sf::Vector2i neighbour)
+{
+    char buff[256];
+    snprintf(buff, sizeof(buff), "%d,%d,%d,%d", origin.x, origin.y, neighbour.x, neighbour.y);
+    std::string key(buff);
+    if (all_edges.find(key) != all_edges.end())
+        return key;
+    snprintf(buff, sizeof(buff), "%d,%d,%d,%d", neighbour.x, neighbour.y, origin.x, origin.y);
+    return std::string(buff);
+}
+
+struct ant
+{
+    std::vector<sf::Vector2i> path;
+};
+
+std::vector<sf::Vector2i> get_next_moves(int i, int j)
+{
+    std::vector<sf::Vector2i> next_moves;
+    for (int y = i - 1; y <= i + 1; y++)
+    {
+        for (int x = j - 1; x <= j + 1; x++)
+        {
+            if ((x == j && y == i) || x < 0 || y < 0 || y >= MAP_HEIGHT || x >= MAP_WIDTH || visited[y][x])
+                continue;
+            next_moves.push_back({x, y});
+        }
+    }
+    return next_moves;
+}
+float get_dist(sf::Vector2i start, sf::Vector2i end)
+{
+    float dx = float(start.x - end.x);
+    float dy = float(start.y - end.y);
+    return std::sqrt(dx * dx + dy * dy);
+}
+void init()
+{
+    srand(time(nullptr));
+    for (int i = 0; i < MAP_HEIGHT; i++)
+    {
+        for (int j = 0; j < MAP_WIDTH; j++)
+        {
+            visited[i][j] = false;
+            auto n = get_next_moves(i, j);
+            for (auto &pos : n)
+            {
+                auto key = get_key({j, i}, pos);
+                edge curr_edge;
+                curr_edge.h = get_dist({j, i}, pos);
+                all_edges[key] = curr_edge;
+            }
+        }
+    }
+}
+float get_rand()
+{
+    return float(rand()) / float(RAND_MAX);
+}
+float total_dist(ant &a)
+{
+    float dist = 0;
+    for (int i = 0; i < a.path.size() - 1; i++)
+    {
+        dist += get_dist(a.path[i], a.path[i + 1]);
+    }
+    return dist;
+}
+void update(ant &a)
+{
+    float dist = total_dist(a);
+    for (int i = 0; i < a.path.size() - 1; i++)
+    {
+        auto key = get_key(a.path[i], a.path[i + 1]);
+        all_edges[key].pheremones += q / dist;
+    }
+}
+void restart_visited()
+{
+    for (int i = 0; i < MAP_HEIGHT; i++)
+    {
+        for (int j = 0; j < MAP_WIDTH; j++)
+        {
+            visited[i][j] = false;
+        }
+    }
+}
+void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
+{
+    rt.clear();
+
+    std::vector<ant> ants;
+    for (int i = 0; i < n_ants; i++)
+    {
+        ants.emplace_back();
+        auto curr_node = start;
+
+        while (true)
+        {
+            auto next_moves = get_next_moves(curr_node.y, curr_node.x);
+            ants.back().path.push_back(curr_node);
+            float sum = 0;
+            float prob = -1;
+            float last_prob = 0;
+            if (curr_node.x == end.x && curr_node.y == end.y)
+            {
+                break;
+            }
+            if (next_moves.size() == 0)
+            {
+                ants.pop_back();
+                break;
+            }
+            for (auto &next_move : next_moves)
+            {
+                auto key = get_key(curr_node, next_move);
+                auto curr_edge = all_edges[key];
+                sum += curr_edge.pheremones * (1.0f / curr_edge.h);
+            }
+            float r = get_rand();
+            int index_of_next_move = rand() % (next_moves.size());
+            for (int i = 0; i < next_moves.size(); i++)
+            {
+                auto next_move = next_moves[i];
+                auto key = get_key(curr_node, next_move);
+                auto curr_edge = all_edges[key];
+                float probability = curr_edge.pheremones * (1.0f / curr_edge.h) / sum;
+                if (prob == -1)
+                    prob = probability;
+                else
+                    prob += probability;
+                if (r > last_prob && r <= prob)
+                {
+                    index_of_next_move = i;
+                    break;
+                }
+                last_prob = probability;
+            }
+            visited[curr_node.y][curr_node.x] = true;
+            curr_node = next_moves[index_of_next_move];
+        }
+
+        restart_visited();
+    }
+    for (auto &e : all_edges)
+    {
+        e.second.pheremones = (1 - rho) * e.second.pheremones;
+    }
+    for (auto &a : ants)
+    {
+        update(a);
+    }
+
+    for (auto &e : all_edges)
+    {
+
+        std::stringstream ss(e.first);
+        sf::Vector2i curr, next;
+        char del;
+        ss >> curr.x;
+        ss >> del;
+        ss >> curr.y;
+        ss >> del;
+        ss >> next.x;
+        ss >> del;
+        ss >> next.y;
+
+        sf::Vector2f p, q;
+        p.x = curr.x * DIM + DIM / 2.0f;
+        p.y = curr.y * DIM + DIM / 2.0f;
+
+        q.x = next.x * DIM + DIM / 2.0f;
+        q.y = next.y * DIM + DIM / 2.0f;
+
+        sf::Vertex line[2];
+        line[0].position = p;
+        line[0].color = sf::Color(255, 255, 0, 255 * e.second.pheremones);
+        line[1].position = q;
+        line[1].color = line[0].color;
+        rt.draw(line, 2, sf::LineStrip);
+    }
+
+    rt.display();
+}
+int main()
+{
+    sf::RenderTexture rt;
+    rt.create(800, 800);
+
+    sf::Sprite sprite;
+    sprite.setTexture(rt.getTexture());
+    sf::RenderWindow window(sf::VideoMode(800, 800), "");
+    window.setVerticalSyncEnabled(true);
+    init();
+    int i = 9;
+    int j = 9;
+    while (window.isOpen())
+    {
+        sf::Event ev;
+        while (window.pollEvent(ev))
+        {
+            if (ev.type == sf::Event::Closed)
+            {
+                window.close();
+                break;
+            }
+            else if (ev.type == sf::Event::MouseButtonPressed && ev.mouseButton.button == sf::Mouse::Left)
+            {
+                auto mouse_pos = sf::Mouse::getPosition(window);
+                i = mouse_pos.y / DIM;
+                j = mouse_pos.x / DIM;
+                init();
+            }
+        }
+
+        ACO({0, 0}, {j, i}, rt);
+
+        window.clear(sf::Color::Black);
+        window.draw(sprite);
+        window.display();
+    }
+    return 0;
+}
