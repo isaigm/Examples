@@ -7,14 +7,15 @@
 #define MAP_HEIGHT 10
 #define DIM 80
 static const float start_pheromones = 0.1f;
-static const float rho = 0.1f;
+static const float rho = 0.6f;
 bool visited[MAP_HEIGHT][MAP_WIDTH];
+bool map[MAP_HEIGHT][MAP_WIDTH];
 static const int n_ants = 50;
-static const float q = 1;
+static const float q = 10;
 struct edge
 {
     float pheremones = start_pheromones;
-    float h = 0;
+    float h = 1;
 };
 std::map<std::string, edge> all_edges;
 
@@ -41,7 +42,7 @@ std::vector<sf::Vector2i> get_next_moves(int i, int j)
     {
         for (int x = j - 1; x <= j + 1; x++)
         {
-            if ((x == j && y == i) || x < 0 || y < 0 || y >= MAP_HEIGHT || x >= MAP_WIDTH || visited[y][x])
+            if ((x == j && y == i) || x < 0 || y < 0 || y >= MAP_HEIGHT || x >= MAP_WIDTH || visited[y][x] || !map[y][x])
                 continue;
             next_moves.push_back({x, y});
         }
@@ -54,21 +55,30 @@ float get_dist(sf::Vector2i start, sf::Vector2i end)
     float dy = float(start.y - end.y);
     return std::sqrt(dx * dx + dy * dy);
 }
-void init()
+void restart_visited()
 {
-    srand(time(nullptr));
     for (int i = 0; i < MAP_HEIGHT; i++)
     {
         for (int j = 0; j < MAP_WIDTH; j++)
         {
             visited[i][j] = false;
+        }
+    }
+}
+void init()
+{
+    srand(time(nullptr));
+    restart_visited();
+    for (int i = 0; i < MAP_HEIGHT; i++)
+    {
+        for (int j = 0; j < MAP_WIDTH; j++)
+        {
             auto n = get_next_moves(i, j);
             for (auto &pos : n)
             {
                 auto key = get_key({j, i}, pos);
-                edge curr_edge;
-                curr_edge.h = get_dist({j, i}, pos);
-                all_edges[key] = curr_edge;
+                all_edges[key].h = get_dist(pos, {j, i});
+                all_edges[key].pheremones = start_pheromones;
             }
         }
     }
@@ -95,20 +105,10 @@ void update(ant &a)
         all_edges[key].pheremones += q / dist;
     }
 }
-void restart_visited()
-{
-    for (int i = 0; i < MAP_HEIGHT; i++)
-    {
-        for (int j = 0; j < MAP_WIDTH; j++)
-        {
-            visited[i][j] = false;
-        }
-    }
-}
+
 void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
 {
     rt.clear();
-
     std::vector<ant> ants;
     for (int i = 0; i < n_ants; i++)
     {
@@ -134,7 +134,8 @@ void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
             for (auto &next_move : next_moves)
             {
                 auto key = get_key(curr_node, next_move);
-                auto curr_edge = all_edges[key];
+                auto &curr_edge = all_edges[key];
+
                 sum += curr_edge.pheremones * (1.0f / curr_edge.h);
             }
             float r = get_rand();
@@ -159,7 +160,6 @@ void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
             visited[curr_node.y][curr_node.x] = true;
             curr_node = next_moves[index_of_next_move];
         }
-
         restart_visited();
     }
     for (auto &e : all_edges)
@@ -199,21 +199,33 @@ void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
         line[1].color = line[0].color;
         rt.draw(line, 2, sf::LineStrip);
     }
-
     rt.display();
 }
 int main()
 {
     sf::RenderTexture rt;
     rt.create(800, 800);
-
+    for (int i = 0; i < MAP_HEIGHT; i++)
+    {
+        for (int j = 0; j < MAP_WIDTH; j++)
+        {
+            map[i][j] = true;
+        }
+    }
+    for (int i = 0; i < 20; i++)
+    {
+        int rx = rand() % MAP_WIDTH;
+        int ry = rand() % MAP_HEIGHT;
+        map[ry][rx] = false;
+    }
     sf::Sprite sprite;
     sprite.setTexture(rt.getTexture());
     sf::RenderWindow window(sf::VideoMode(800, 800), "");
-    window.setVerticalSyncEnabled(true);
-    init();
+    // window.setVerticalSyncEnabled(true);
     int i = 9;
     int j = 9;
+    init();
+
     while (window.isOpen())
     {
         sf::Event ev;
@@ -237,6 +249,24 @@ int main()
 
         window.clear(sf::Color::Black);
         window.draw(sprite);
+        for (int i = 0; i < MAP_HEIGHT; i++)
+        {
+            for (int j = 0; j < MAP_WIDTH; j++)
+            {
+                sf::RectangleShape rect;
+                rect.setSize({DIM, DIM});
+                sf::Vector2f pos{float(j * DIM), float(i * DIM)};
+                rect.setFillColor(sf::Color::Transparent);
+                rect.setOutlineThickness(0.7f);
+                rect.setPosition(pos);
+
+                if (!map[i][j])
+                {
+                    rect.setFillColor(sf::Color::Red);
+                }
+                window.draw(rect);
+            }
+        }
         window.display();
     }
     return 0;
