@@ -12,6 +12,8 @@ bool visited[MAP_HEIGHT][MAP_WIDTH];
 bool map[MAP_HEIGHT][MAP_WIDTH];
 static const int n_ants = 50;
 static const float q = 10;
+static float alpha = 1;
+static float beta = 1;
 struct edge
 {
     float pheremones = start_pheromones;
@@ -29,11 +31,35 @@ std::string get_key(sf::Vector2i origin, sf::Vector2i neighbour)
     snprintf(buff, sizeof(buff), "%d,%d,%d,%d", neighbour.x, neighbour.y, origin.x, origin.y);
     return std::string(buff);
 }
-
+float get_dist(sf::Vector2i start, sf::Vector2i end)
+{
+    float dx = float(start.x - end.x);
+    float dy = float(start.y - end.y);
+    return std::sqrt(dx * dx + dy * dy);
+}
 struct ant
 {
+    float total_dist()
+    {
+        float dist = 0;
+        for (int i = 0; i < int(path.size() - 1); i++)
+        {
+            dist += get_dist(path[i], path[i + 1]);
+        }
+        return dist;
+    }
+    void update()
+    {
+        float dist = total_dist();
+        for (int i = 0; i < int(path.size() - 1); i++)
+        {
+            auto key = get_key(path[i], path[i + 1]);
+            all_edges[key].pheremones += q / dist;
+        }
+    }
     std::vector<sf::Vector2i> path;
 };
+ant best_ant;
 
 std::vector<sf::Vector2i> get_next_moves(int i, int j)
 {
@@ -49,12 +75,7 @@ std::vector<sf::Vector2i> get_next_moves(int i, int j)
     }
     return next_moves;
 }
-float get_dist(sf::Vector2i start, sf::Vector2i end)
-{
-    float dx = float(start.x - end.x);
-    float dy = float(start.y - end.y);
-    return std::sqrt(dx * dx + dy * dy);
-}
+
 void restart_visited()
 {
     for (int i = 0; i < MAP_HEIGHT; i++)
@@ -69,6 +90,7 @@ void init()
 {
     srand(time(nullptr));
     restart_visited();
+    best_ant.path.erase(best_ant.path.begin(), best_ant.path.end());
     for (int i = 0; i < MAP_HEIGHT; i++)
     {
         for (int j = 0; j < MAP_WIDTH; j++)
@@ -87,29 +109,12 @@ float get_rand()
 {
     return float(rand()) / float(RAND_MAX);
 }
-float total_dist(ant &a)
-{
-    float dist = 0;
-    for (int i = 0; i < a.path.size() - 1; i++)
-    {
-        dist += get_dist(a.path[i], a.path[i + 1]);
-    }
-    return dist;
-}
-void update(ant &a)
-{
-    float dist = total_dist(a);
-    for (int i = 0; i < a.path.size() - 1; i++)
-    {
-        auto key = get_key(a.path[i], a.path[i + 1]);
-        all_edges[key].pheremones += q / dist;
-    }
-}
 
 void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
 {
     rt.clear();
     std::vector<ant> ants;
+
     for (int i = 0; i < n_ants; i++)
     {
         ants.emplace_back();
@@ -124,6 +129,12 @@ void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
             float last_prob = 0;
             if (curr_node.x == end.x && curr_node.y == end.y)
             {
+                float best_dist = best_ant.total_dist();
+                if (best_dist == 0 || best_dist > ants.back().total_dist())
+                {
+                    std::cout << "best path found\n";
+                    best_ant.path = ants.back().path;
+                }
                 break;
             }
             if (next_moves.size() == 0)
@@ -135,8 +146,7 @@ void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
             {
                 auto key = get_key(curr_node, next_move);
                 auto &curr_edge = all_edges[key];
-
-                sum += curr_edge.pheremones * (1.0f / curr_edge.h);
+                sum += std::pow(curr_edge.pheremones, alpha) * std::pow(1.0f / curr_edge.h, beta);
             }
             float r = get_rand();
             int index_of_next_move = rand() % (next_moves.size());
@@ -145,7 +155,7 @@ void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
                 auto next_move = next_moves[i];
                 auto key = get_key(curr_node, next_move);
                 auto curr_edge = all_edges[key];
-                float probability = curr_edge.pheremones * (1.0f / curr_edge.h) / sum;
+                float probability = std::pow(curr_edge.pheremones, alpha) * std::pow(1.0f / curr_edge.h, beta) / sum;
                 if (prob == -1)
                     prob = probability;
                 else
@@ -168,13 +178,13 @@ void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
     }
     for (auto &a : ants)
     {
-        update(a);
+        a.update();
     }
-
-    for (auto &e : all_edges)
+    best_ant.update();
+    for (int i = 0; i < int(best_ant.path.size() - 1); i++)
     {
-
-        std::stringstream ss(e.first);
+        auto key = get_key(best_ant.path[i], best_ant.path[i + 1]);
+        std::stringstream ss(key);
         sf::Vector2i curr, next;
         char del;
         ss >> curr.x;
@@ -184,17 +194,14 @@ void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
         ss >> next.x;
         ss >> del;
         ss >> next.y;
-
         sf::Vector2f p, q;
         p.x = curr.x * DIM + DIM / 2.0f;
         p.y = curr.y * DIM + DIM / 2.0f;
-
         q.x = next.x * DIM + DIM / 2.0f;
         q.y = next.y * DIM + DIM / 2.0f;
-
         sf::Vertex line[2];
         line[0].position = p;
-        line[0].color = sf::Color(255, 255, 0, 255 * e.second.pheremones);
+        line[0].color = sf::Color(255, 255, 0);
         line[1].position = q;
         line[1].color = line[0].color;
         rt.draw(line, 2, sf::LineStrip);
@@ -205,6 +212,7 @@ int main()
 {
     sf::RenderTexture rt;
     rt.create(800, 800);
+
     for (int i = 0; i < MAP_HEIGHT; i++)
     {
         for (int j = 0; j < MAP_WIDTH; j++)
