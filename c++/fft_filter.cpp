@@ -36,7 +36,7 @@ int main()
     std::string input_file = "test.wav";
     if (ifs.openFromFile(input_file)
     {
-        std::string ouput_file = "filter.wav";
+        std::string output_file = "filter.wav";
         ofs.openFromFile(output_file, 44100, 1);
 
         sf::Int16 samples[WINDOW_SIZE * 2];
