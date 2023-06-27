@@ -17,6 +17,7 @@ def dfs(node):
                 return res
     return None
 
+
 for scr in scripts:
     text = str(scr)
     token = "var ytInitialData = {"
@@ -32,6 +33,7 @@ for scr in scripts:
                 curly_brackets_counter -= 1
             idx += 1
         objects = json.loads(text[start_idx: idx])
+        
         k, v = dfs(objects)
         hours = 0
         minutes = 0
@@ -39,18 +41,18 @@ for scr in scripts:
         for item in v['playlist']['contents']:
             try:
                 duration = item['playlistPanelVideoRenderer']['lengthText']['simpleText']
-                duration = duration.split(':')
+                duration = list(map(int, duration.split(':')))
                 hour = 0
                 if len(duration) == 3:
-                    hour = int(duration[0])
-                    min  = int(duration[1])
-                    sec  = int(duration[2])
+                    hour = duration[0]
+                    minute  = duration[1]
+                    sec  = duration[2]
                 else:
-                    min = int(duration[0])
-                    sec = int(duration[1])
+                    minute = duration[0]
+                    sec = duration[1]
                 secs += sec
                 
-                minutes += min
+                minutes += minute
                 minutes += secs // 60
                 
                 hours += hour
@@ -60,5 +62,5 @@ for scr in scripts:
                 secs %= 60
             except:
                 pass
-        print(f'the playlist has a total duration of hours {hours}, {minutes} minutes and {secs} seconds')
+        print(f'the playlist has a total duration of {hours} hours, {minutes} minutes and {secs} seconds')
         break
