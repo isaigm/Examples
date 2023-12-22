@@ -1,45 +1,93 @@
-#include <iostream>
+#include <SFML/Graphics.hpp>
+#include <random>
 #include <vector>
-// Y = a + b * x                     x     y
-float pardva(std::vector<std::pair<float, float>> &dataset, float a, float b)
+#include <iostream>
+#define WIDTH 800
+#define HEIGHT 600
+const int N_POINTS = 100;
+std::random_device rd;
+std::mt19937 gen{rd()};
+std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+float map(float n, float x1, float x2, float y1, float y2)
 {
-    float s = dataset.size() * a;
-    for (int i = 0; i < dataset.size(); i++)
-    {
-        s += (b * dataset[i].first - dataset[i].second);
-    }
-    return s;
+    float m = (y2 - y1) / (x2 - x1);
+    return y1 + m * (n - x1);
 }
-float pardvb(std::vector<std::pair<float, float>> &dataset, float a, float b)
+float real_function(float x)
 {
-    float s = 0;
-    for (int i = 0; i < dataset.size(); i++)
-    {
-        s += (a + b * dataset[i].first - dataset[i].second) * dataset[i].first;
-    }
-    return s;
+    return x * x - 0.5f;
 }
-void gradient_descent(std::vector<std::pair<float, float>> &dataset)
+
+sf::Vector3f partial(std::vector<float> &x, std::vector<float> &y, float a, float b, float c)
 {
-    float a = 10, b = 10;
-    float learning_rate = 0.00002f;
-    while (true)
+    float partial_dev = 0.0f;
+    sf::Vector3f result{};
+    for (int i = 0; i < x.size(); i++)
     {
-     
-        a += -pardva(dataset, a, b) * learning_rate;
-        b += -pardvb(dataset, a, b) * learning_rate;
-        printf("%f %f\n", a, b);
+        float xi = x[i];
+        float yi = y[i];
+        float temp = 2 * (yi - a * xi * xi - b * xi - c);
+        result.x += temp * (-xi * xi);
+        result.y += temp * -xi;
+        result.z += temp * -1;
     }
+    result /= float(x.size());
+    return result;
 }
 int main()
 {
-    std::vector<std::pair<float, float>> dataset;
-    float c = 10.0;
-    for(int i = 0; i < 100; i++)
+    sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "");
+    window.setVerticalSyncEnabled(true);
+
+    std::vector<sf::Vertex> points;
+    std::vector<float> x;
+    std::vector<float> y;
+    float curr_x = -1;
+    for (int i = 0; i < N_POINTS; i++)
     {
-        dataset.push_back({c, c * 1.8f + 32.0f});
-        c += 0.1f;
+
+        sf::Vertex point;
+        point.color = sf::Color::Red;
+        curr_x += 2 / float(N_POINTS);
+        float sign = dist(gen) < 0.5f ? 1 : -1;
+        float curr_y = real_function(curr_x) + sign * dist(gen) / 50.0f;
+        x.push_back(curr_x);
+        y.push_back(curr_y);
+        sf::Vector2f realPos = {map(curr_x, -1, 1, 0, WIDTH), map(curr_y, -1, 1, HEIGHT, 0)};
+        point.position = realPos;
+        points.push_back(point);
     }
-    gradient_descent(dataset);
+    sf::Vector3f coef = {dist(gen), dist(gen), dist(gen)};
+    float lr = 0.05f;
+
+    while (window.isOpen())
+    {
+        sf::Event ev;
+        while (window.pollEvent(ev))
+        {
+            if (ev.type == sf::Event::Closed)
+            {
+                window.close();
+                break;
+            }
+        }
+        std::vector<sf::Vertex> predicted_points;
+        for (int i = 0; i < N_POINTS; i++)
+        {
+            sf::Vertex point;
+            float xx = x[i];
+            float yy = coef.x * (xx * xx) + coef.y * xx + coef.z;
+            point.color = sf::Color::Green;
+            sf::Vector2f realPos = {map(xx, -1, 1, 0, WIDTH), map(yy, -1, 1, HEIGHT, 0)};
+            point.position = realPos;
+            predicted_points.push_back(point);
+        }
+        coef -= lr * partial(x, y, coef.x, coef.y, coef.z);
+        window.clear();
+        window.draw(points.data(), points.size(), sf::Points);
+        window.draw(predicted_points.data(), predicted_points.size(), sf::Points);
+        window.display();
+    }
     return 0;
 }
