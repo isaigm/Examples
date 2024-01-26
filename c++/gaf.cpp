@@ -54,12 +54,9 @@ namespace GAF
             scaled.push_back(scale(x));
         }
         size_t N = timeSeries.size();
-        std::vector<std::vector<float>> image;
         for (size_t i = 0; i < scaled.size(); i++)
         {
             scaled[i] = std::acos(scaled[i]);
-            std::vector<float> row(N);
-            image.push_back(std::move(row));
         }
         sf::Image resultImg;
         std::vector<sf::Color> gradient;
@@ -73,15 +70,16 @@ namespace GAF
         {
             for (size_t j = 0; j < N; j++)
             {
+                float output {};
                 if (type == GASF)
                 {
-                    image[i][j] = std::cos(scaled[i] + scaled[j]);
+                    output = std::cos(scaled[i] + scaled[j]);
                 }
                 else if (type == GADF)
                 {
-                    image[i][j] = std::sin(scaled[i] - scaled[j]);
+                    output = std::sin(scaled[i] - scaled[j]);
                 }
-                int idx = map(image[i][j], -1, 1, 0, gradient.size() - 1);
+                int idx = map(output, -1, 1, 0, gradient.size() - 1);
                 resultImg.setPixel(i, j, gradient[idx]);
             }
         }
