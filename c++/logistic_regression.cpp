@@ -77,7 +77,7 @@ public:
     {
         return m_coefficients;
     }
-    void fit(std::vector<std::vector<T>> &dataSet, T learningRate, size_t batchSize, size_t epochs)
+    void fit(std::vector<std::vector<T>> &dataSet, T learningRate, float test, size_t batchSize, size_t epochs)
     {
         auto getRandom = [](double min, double max)
         {
@@ -90,6 +90,17 @@ public:
         }
         std::random_device rd;
         std::mt19937 g(rd());
+        std::vector<std::vector<T>> testSet;
+
+        std::shuffle(dataSet.begin(), dataSet.end(), g);
+
+        size_t testSize = test * dataSet.size();
+
+        for (size_t i = 0; i < testSize; i++)
+        {
+            testSet.push_back(*dataSet.begin());
+            dataSet.erase(dataSet.begin());
+        }
         for (size_t i = 0; i < epochs; i++)
         {
             size_t init = 0;
@@ -107,11 +118,13 @@ public:
 
                 copy(start, end, result.begin());
                 sgd(result, learningRate);
-                
+
                 init += batchSize_;
             }
         }
+        evaluate(testSet);
     }
+
     T predict(std::vector<T> &input)
     {
         T result{0};
@@ -123,6 +136,8 @@ public:
 
         return sigmoid(result);
     }
+
+private:
     void evaluate(std::vector<std::vector<T>> &dataSet)
     {
         int sucess = 0;
@@ -138,8 +153,6 @@ public:
         }
         std::cout << double(sucess) / double(dataSet.size()) << "\n";
     }
-
-private:
     void sgd(std::vector<std::vector<T>> &dataSet, T learningRate)
     {
 
@@ -174,12 +187,12 @@ private:
     size_t m_inputs;
 };
 int main()
-{    
+{
     srand(time(nullptr));
     LogisticRegressor<double> lr(15);
     std::vector<std::vector<double>> dataSet;
     utils::readFromCSV(dataSet, "data_set.csv");
-    lr.fit(dataSet, 0.17, 20, 10);
-    lr.evaluate(dataSet);
+    lr.fit(dataSet, 0.17, 0.2, 20, 100);
+
     return 0;
 }
