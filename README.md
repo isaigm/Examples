@@ -1,2 +1,2 @@
 # Examples
-just a bunch of small programs of various topics 
+just a bunch of small programs about various topics 
