@@ -5,11 +5,12 @@
 #include <set>
 #include <sstream>
 #include <fstream>
-using InputType = std::string;
+#include <memory>
+using InputType  = std::string;
 using TargetType = std::string;
-using Row = std::vector<InputType>;
-using DataSet = std::vector<Row>;
-using Subsets = std::map<InputType, DataSet>;
+using Row        = std::vector<InputType>;
+using DataSet    = std::vector<Row>;
+using Subsets    = std::map<InputType, DataSet>;
 
 struct Split
 {
@@ -19,10 +20,10 @@ struct Split
 };
 struct Node
 {
-    size_t     featureIdx;
-    TargetType classPredicted;
-    double     informationGain;
-    std::map<InputType, Node*> childs;
+    size_t     featureIdx{};
+    TargetType classPredicted{};
+    double     informationGain{};
+    std::map<InputType, std::shared_ptr<Node>> childs;
     bool isLeaf = true;
 };
 
@@ -33,7 +34,7 @@ namespace utils
     {
         auto parseLine = [](std::string& line, char sep) -> std::vector<T>
         {
-                auto parseNum = [](std::string& str)
+                auto parseType = [](std::string& str)
                 {
                        std::stringstream ss(str);
                        T val;
@@ -51,7 +52,7 @@ namespace utils
                     }
                     if (ch == sep)
                     {
-                        values.push_back(parseNum(curr));
+                        values.push_back(parseType(curr));
                         curr = "";
                     }
                     else
@@ -59,7 +60,7 @@ namespace utils
                         curr += ch;
                     }
                 }
-                values.push_back(parseNum(curr));
+                values.push_back(parseType(curr));
                 return values;
         };
         std::string line;
@@ -109,33 +110,59 @@ public:
             if (p == row[classIndex])
                 sucess++;
         }
-        std::cout << double(sucess) / double(dataSet.size());
+        std::cout << double(sucess) / double(dataSet.size()) << "\n";
+    }
+    void printTree()
+    {
+        printTree(root, "", "");
     }
 private:
-    
-    TargetType predict(Node* node, Row& input)
+    void printTree(std::shared_ptr<Node> node, std::string value, std::string prefix)
     {
-        if (node == nullptr)
-            return {};
+        static int space = 4;
+        auto addSpace = [](std::string &input)
+        {
+           for (int i = 0; i < space; i++)
+           {
+               input.push_back(' ');
+           }
+        };
+        std::string level;
+        if (node->isLeaf)
+        {
+            level = prefix  +"|__ " + value + " -> " + node->classPredicted;
+        }
+        else
+        {
+            level = prefix  +"|__ " + std::to_string(node->featureIdx) + "," + value;
+        }
+        std::cout << level << "\n";
+        addSpace(prefix);
+        for (auto& child : node->childs)
+        {
+            printTree(child.second, child.first, prefix);
+        }
+    }
+    TargetType predict(std::shared_ptr<Node> node, Row& input)
+    {
         if (node->isLeaf)
         {
             return node->classPredicted;
         }
-        size_t featureIdx = node->featureIdx;
-       
+        size_t featureIdx = node->featureIdx;  
         return predict(node->childs[input[node->featureIdx]], input);
     }
     
-    Node* buildTree(DataSet& dataSet, size_t currDepth)
+    std::shared_ptr<Node> buildTree(DataSet& dataSet, size_t currDepth)
     {
         size_t numSamples = dataSet.size();
-        Split bestSplit = getBestSplit(dataSet);
+        Split bestSplit   = getBestSplit(dataSet);
        
         if (numSamples >= minSampleSplit && currDepth <= maxDepth)
         {
             if (bestSplit.informationGain > 0)
             {
-                Node* parent = new Node();
+                auto parent = std::make_shared<Node>();
                 parent->isLeaf = false;
                 for (auto& subset : bestSplit.childs)
                 {
@@ -146,8 +173,7 @@ private:
                 return parent;
             }
         }
-
-        Node* node = new Node();
+        auto node = std::make_shared<Node>();
         node->isLeaf = true;
         node->classPredicted = getLeafValue(dataSet);
         return node;
@@ -188,7 +214,6 @@ private:
             if (i != classIndex)
                 featuresIdx.push_back(i);
         }
-      
         Split bestSplit;
         double maxGain = float(INT_MIN);
         for (auto featureIdx : featuresIdx)
@@ -196,14 +221,12 @@ private:
             auto uniqueValues = getUniqueFeatureValues(dataSet, featureIdx);
             Subsets childs    = std::move(split(dataSet, featureIdx, uniqueValues));
             double infGain    = informationGain(dataSet, childs);
-           
             if (infGain > maxGain)
             {
                 bestSplit.informationGain = infGain;
                 bestSplit.featureIdx = featureIdx;
                 bestSplit.childs = childs;
                 maxGain = infGain;
-
             }
         }
         return bestSplit;
@@ -220,7 +243,6 @@ private:
     Subsets split(DataSet& dataSet, size_t featureIdx, std::set<InputType> &values)
     {
         Subsets result;
-
         for (auto& row : dataSet)
         {
             for (auto& value : values)
@@ -252,7 +274,7 @@ private:
     size_t classIndex;
     size_t maxDepth;
     size_t minSampleSplit;
-    Node* root = nullptr;
+    std::shared_ptr<Node> root;
 };
 
 int main()
@@ -263,6 +285,6 @@ int main()
     TreeClassifier treeClassifier(4, 3, 2);
     treeClassifier.fit(dataSet);
     treeClassifier.evaluate(dataSet);
-  
+    treeClassifier.printTree();
     return 0;
 }
