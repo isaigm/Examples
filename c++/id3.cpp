@@ -3,9 +3,8 @@
 #include <map>
 #include <cmath>
 #include <set>
-#include <sstream>
-#include <fstream>
 #include <memory>
+#include "utils.hpp"
 using InputType  = std::string;
 using TargetType = std::string;
 using Row        = std::vector<InputType>;
@@ -26,69 +25,11 @@ struct Node
     std::map<InputType, std::shared_ptr<Node>> childs;
     bool isLeaf = true;
 };
-
-namespace utils
+enum class ImpurityCriteria
 {
-    template <class T>
-    void readFromCSV(std::vector<std::vector<T>>& dataSet, std::string path)
-    {
-        auto parseLine = [](std::string& line, char sep) -> std::vector<T>
-        {
-                auto parseType = [](std::string& str)
-                {
-                       std::stringstream ss(str);
-                       T val;
-                       ss >> val;
-                       return val;
-                };
-                std::string curr = "";
-                std::vector<T> values;
-                for (size_t i = 0; i < line.size(); i++)
-                {
-                    char ch = line[i];
-                    if (curr == "NA")
-                    {
-                        return {};
-                    }
-                    if (ch == sep)
-                    {
-                        values.push_back(parseType(curr));
-                        curr = "";
-                    }
-                    else
-                    {
-                        curr += ch;
-                    }
-                }
-                values.push_back(parseType(curr));
-                return values;
-        };
-        std::string line;
-        std::ifstream file(path);
-        bool seenFirstLine = false;
-        if (!file.is_open())
-        {
-            throw std::runtime_error("file doesnt exist");
-        }
-
-        while (std::getline(file, line))
-        {
-            if (!seenFirstLine)
-            {
-                seenFirstLine = true;
-            }
-            else
-            {
-                auto row = parseLine(line, ',');
-                if (row.size() > 0)
-                {
-                    dataSet.push_back(row);
-                }
-            }
-        }
-    }
+    Entropy,
+    GiniIndex
 };
-
 
 struct TreeClassifier
 {
@@ -103,21 +44,21 @@ public:
     }
     void evaluate(DataSet& dataSet)
     {
-        int sucess = 0;
+        int success = 0;
         for (auto& row : dataSet)
         {
             TargetType p = predict(root, row);
             if (p == row[classIndex])
-                sucess++;
+                success++;
         }
-        std::cout << double(sucess) / double(dataSet.size()) << "\n";
+        std::printf("Success ratio: %f\n", double(success) / double(dataSet.size()));
     }
-    void printTree()
+    void printTree(std::vector<std::string> &colNames)
     {
-        printTree(root, "", "");
+        printTree(root, "", "", colNames);
     }
 private:
-    void printTree(std::shared_ptr<Node> node, std::string value, std::string prefix)
+    void printTree(std::shared_ptr<Node> node, std::string value, std::string prefix, std::vector<std::string> &colNames)
     {
         static int space = 4;
         auto addSpace = [](std::string &input)
@@ -134,13 +75,13 @@ private:
         }
         else
         {
-            level = prefix  +"|__ " + std::to_string(node->featureIdx) + "," + value;
+            level = prefix  +"|__ " + value;
         }
         std::cout << level << "\n";
         addSpace(prefix);
         for (auto& child : node->childs)
         {
-            printTree(child.second, child.first, prefix);
+            printTree(child.second, colNames[node->featureIdx] + "=" + child.first, prefix, colNames);
         }
     }
     TargetType predict(std::shared_ptr<Node> node, Row& input)
@@ -220,7 +161,7 @@ private:
         {
             auto uniqueValues = getUniqueFeatureValues(dataSet, featureIdx);
             Subsets childs    = std::move(split(dataSet, featureIdx, uniqueValues));
-            double infGain    = informationGain(dataSet, childs);
+            double infGain    = informationGain(dataSet, childs, ImpurityCriteria::Entropy);
             if (infGain > maxGain)
             {
                 bestSplit.informationGain = infGain;
@@ -231,12 +172,20 @@ private:
         }
         return bestSplit;
     }
-    double informationGain(DataSet& parentSet, Subsets &subsets)
+    double informationGain(DataSet& parentSet, Subsets &subsets, ImpurityCriteria mode = ImpurityCriteria::Entropy)
     {
         double ig = 0;
         for (auto& subset : subsets)
         {
-            ig += entropy(subset.second) * double(subset.second.size()) / double(parentSet.size());
+            double pr = double(subset.second.size()) / double(parentSet.size());
+            if (mode == ImpurityCriteria::Entropy)
+            {
+                ig += entropy(subset.second) * pr;
+            }
+            else if (mode == ImpurityCriteria::Entropy)
+            {
+                ig += gini(subset.second) * pr;
+            }
         }
         return entropy(parentSet) - ig;
     }
@@ -256,13 +205,18 @@ private:
         }
         return result;
     }
-    double entropy(DataSet& dataSet)
+    std::map<TargetType, int> countClasses(DataSet& dataSet)
     {
         std::map<TargetType, int> classes;
         for (auto& row : dataSet)
         {
             classes[row[classIndex]]++;
         }
+        return classes;
+    }
+    double entropy(DataSet& dataSet)
+    {
+        auto classes  = std::move(countClasses(dataSet));
         double result = 0;
         for (auto& cl : classes)
         {
@@ -271,20 +225,31 @@ private:
         }
         return -result;
     }
+    double gini(DataSet& dataSet)
+    {
+        auto classes  = std::move(countClasses(dataSet));
+        double result = 0;
+        for (auto& cl : classes)
+        {
+            double p = double(cl.second) / double(dataSet.size());
+            result += p * p;
+        }
+        return 1 - result;
+    }
     size_t classIndex;
     size_t maxDepth;
     size_t minSampleSplit;
     std::shared_ptr<Node> root;
 };
-
 int main()
 {
-    auto pathToCsv = "C:\\Users\\isaig\\OneDrive\\Desktop\\archive\\PlayTennis.csv";
+    std::vector<std::string> colNames;
+    auto pathToCsv = "C:\\Users\\isaig\\OneDrive\\Desktop\\contact.csv";
     DataSet dataSet;
-    utils::readFromCSV(dataSet, pathToCsv);
-    TreeClassifier treeClassifier(4, 3, 2);
+    utils::readFromCSV(dataSet, colNames, pathToCsv); 
+    TreeClassifier treeClassifier(3, 3, 2);
     treeClassifier.fit(dataSet);
     treeClassifier.evaluate(dataSet);
-    treeClassifier.printTree();
+    treeClassifier.printTree(colNames);
     return 0;
 }
