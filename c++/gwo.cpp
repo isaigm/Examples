@@ -4,12 +4,13 @@
 #include <concepts>
 #include <queue>
 #include <cassert>
+#include <eigen3/Eigen/Dense>
 #include <SFML/Graphics.hpp>
 
 std::random_device rd;
 std::mt19937 mt(rd());
-const int WIDTH = 1280;
-const int HEIGHT = 720;
+const int WIDTH = 800;
+const int HEIGHT = 600;
 const int WOLF_RADIUS = 5;
 namespace constants
 {
@@ -26,92 +27,15 @@ T random(T min, T max)
     return distribution(mt);
 }
 template <std::floating_point T>
-struct NVector
-{
-    NVector(size_t n) : vec(n, T{}) {}
-    NVector() {}
-    T operator[](size_t i)
-    {
-        return vec[i];
-    }
-    NVector operator*(const NVector &other)
-    {
-        assert(other.vec.size() == vec.size());
-        NVector result(other.vec.size());
-        for (auto i = 0; i < vec.size(); i++)
-        {
-            result.vec[i] = vec[i] * other.vec[i];
-        }
-        return result;
-    }
-
-    void operator+=(const NVector &other)
-    {
-        assert(other.vec.size() == vec.size());
-        for (auto i = 0; i < vec.size(); i++)
-        {
-            vec[i] += other.vec[i];
-        }
-    }
-    NVector operator+(const NVector &other)
-    {
-        assert(other.vec.size() == vec.size());
-        NVector result(other.vec.size());
-        for (auto i = 0; i < vec.size(); i++)
-        {
-            result.vec[i] = vec[i] + other.vec[i];
-        }
-        return result;
-    }
-    NVector operator-(const NVector &other)
-    {
-        assert(other.vec.size() == vec.size());
-        NVector result(other.vec.size());
-        for (auto i = 0; i < vec.size(); i++)
-        {
-            result.vec[i] = vec[i] - other.vec[i];
-        }
-        return result;
-    }
-    NVector &operator*(T alpha)
-    {
-        for (auto i = 0; i < vec.size(); i++)
-        {
-            vec[i] *= alpha;
-        }
-        return *this;
-    }
-    void abs()
-    {
-        for (auto i = 0; i < vec.size(); i++)
-        {
-            vec[i] = std::abs(vec[i]);
-        }
-    }
-    void clamp(T min, T max)
-    {
-        for (size_t i = 0; i < vec.size(); i++)
-        {
-            if (vec[i] < min)
-                vec[i] = min;
-            if (vec[i] > max)
-                vec[i] = max;
-        }
-    }
-    std::vector<T> vec;
-};
-
-template <std::floating_point T>
 struct Wolf
 {
     Wolf() : pos(constants::N)
     {
         for (auto i = 0; i < constants::N; i++)
         {
-            pos.vec[i] = random(constants::minRange, constants::maxRange);
+            pos[i] = random(constants::minRange, constants::maxRange);
         }
     }
-
     T fitness() // Levy Function N. 13
     {
         T x = pos[0];
@@ -121,8 +45,7 @@ struct Wolf
         T term3 = (y - 1) * (y - 1) * (1 + std::sin(2 * M_PI * y) * std::sin(2 * M_PI * y));
         return term1 + term2 + term3;
     }
-
-    NVector<T> pos;
+    Eigen::ArrayX<T> pos;
 };
 
 template <std::floating_point T>
@@ -174,7 +97,6 @@ sf::Color interpolateColor(const sf::Color &start, const sf::Color &end, float f
     result.b = static_cast<sf::Uint8>(start.b + factor * (end.b - start.b));
     return result;
 }
-
 template <std::floating_point T>
 void renderState(sf::RenderTarget &rt, GWOState<T> &state)
 {
@@ -193,9 +115,9 @@ void renderState(sf::RenderTarget &rt, GWOState<T> &state)
         sf::CircleShape point(WOLF_RADIUS);
         point.setOrigin({WOLF_RADIUS, WOLF_RADIUS});
         T fitness = wolf.fitness();
-        float normalizedFitness = (fitness - minFitness) / (maxFitness - minFitness); 
-        sf::Color startColor = sf::Color::Red; 
-        sf::Color endColor = sf::Color::Blue;  
+        float normalizedFitness = (fitness - minFitness) / (maxFitness - minFitness);
+        sf::Color startColor = sf::Color::Red;
+        sf::Color endColor = sf::Color::Blue;
         sf::Color pointColor = interpolateColor(startColor, endColor, normalizedFitness);
         point.setFillColor(pointColor);
         sf::Vector2<T> pos;
@@ -213,32 +135,36 @@ void GWO(int currIteration, int maxIterations, GWOState<T> &state)
     if (currIteration >= maxIterations)
         return;
     auto bestWolves = state.getBestKWolves();
-    std::cout << bestWolves[0].pos[0] << "," << bestWolves[0].pos[1] << "\n";
+    auto &bestWolf = bestWolves[0];
+    std::cout << "(" << bestWolf.pos[0] << "," << bestWolf.pos[1] << ") fitness: " << bestWolf.fitness() <<  "\n";
     T a = 2 * (1 - T(currIteration) / T(maxIterations));
     for (auto &wolf : state.population)
     {
-        NVector<T> nextPos(constants::N);
+        Eigen::ArrayX<T> nextPos(constants::N);
+        nextPos.setZero();
         for (auto i = 0; i < constants::K; i++)
         {
-            T A = 2 * a * random(0.0, 1.0) - a;
-            T C = 2 * random(0.0, 1.0);
+            Eigen::ArrayX<T> A(constants::N);
+            Eigen::ArrayX<T> C(constants::N);
+            for (auto j = 0; j < constants::N; j++)
+            {
+                A[j] = 2 * a * random(0.0, 1.0) - a;
+                C[j] = 2 * random(0.0, 1.0);
+            }
             auto &bestWolf = bestWolves[i];
-            auto D = bestWolf.pos * C - wolf.pos;
-            D.abs();
+            auto D = (bestWolf.pos * C - wolf.pos).abs();
             nextPos += bestWolf.pos - D * A;
         }
-        nextPos = nextPos * (1.0 / T(constants::K));
-        wolf.pos = nextPos;
-        wolf.pos.clamp(constants::minRange, constants::maxRange);
+        nextPos *= (1.0 / T(constants::K));
+        wolf.pos = nextPos.max(constants::minRange).min(constants::maxRange);;
         state.addWolf(wolf);
     }
 }
 int main()
 {
     GWOState<float> currState;
-    sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "");
+    sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "GWO");
     window.setVerticalSyncEnabled(true);
-    float time = 0;
     int currIteration = 0;
     int maxIterations = 200;
     for (auto &wolf : currState.population)
