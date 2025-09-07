@@ -2,9 +2,8 @@
 #include <vector>
 #include <algorithm>
 #include <random>
-#include <map>
 #include <set>
-
+#include <list>
 std::random_device rd;
 std::mt19937 mt(1234);
 float getRandom(float min, float max)
@@ -25,10 +24,7 @@ struct Interval
 		Closed, //[x, y]
 		LeftOpenRightClosed // (x, y]
 	};
-	Interval(float min_, float max_, Type type_ = Type::Closed) : min(min_), max(max_), type(type_)
-	{
-
-	}
+	Interval(float min_, float max_, Type type_ = Type::Closed) : min(min_), max(max_), type(type_){}
 	bool contains(float x)
 	{
 		switch (type)
@@ -59,10 +55,8 @@ std::ostream& operator<<(std::ostream& os, const Interval& interval)
 	default:
 		break;
 	}
-
 	return os;
 }
-
 std::vector<std::vector<int>> computeQuantaMatrix(size_t nClasses, const std::vector<Sample>& row, const std::vector<Interval>& intervals)
 {
 	std::vector<std::vector<int>> quantaMat(nClasses, (std::vector<int>(intervals.size(), 0)));
@@ -107,7 +101,7 @@ float computeCAIM(const std::vector<std::vector<int>>& quantaMat)
 void CAIM(size_t nClasses, const std::vector<Sample>& row)
 {
 	if (row.empty()) {
-		std::cout << "Input data is empty." << std::endl;
+		std::cout << "Input data is empty.\n";
 		return;
 	}
 	float minValue = row[0].value;
@@ -119,39 +113,34 @@ void CAIM(size_t nClasses, const std::vector<Sample>& row)
 		maxValue = std::max(maxValue, sample.value);
 		uniqueValues.insert(sample.value);
 	}
-	std::vector<float> values;
-	for (auto val : uniqueValues)
-	{
-		values.push_back(val);
-	}
-	std::vector<float> boundary;
+	std::vector<float> values(uniqueValues.begin(), uniqueValues.end());
+	std::list<float> boundary;
 	for (int i = 0; i < values.size() - 1; i++)
 	{
 		float midPoint = (values[i] + values[i + 1]) / 2.0f;
 		boundary.push_back(midPoint);
 	}
-
 	float globalCAIM = 0;
 	std::vector<Interval> scheme{ {minValue, maxValue} };
-	std::set<size_t> usedIndex;
 	size_t k = 1;
 	while (true)
 	{
 		float currMax = 0;
-		size_t selectedIndex{};
+		std::list<float>::iterator selectedIt = boundary.end();
 		std::vector<Interval> currIntervals;
-		for (size_t i = 0; i < boundary.size(); i++)
+		
+		for (auto it = boundary.begin(); it != boundary.end(); it++)
 		{
-			if (usedIndex.contains(i)) continue;
 			auto tentativeScheme = scheme;
+			float border = *it;
 			for (size_t j = 0; j < tentativeScheme.size(); j++)
 			{
 				auto& interval = tentativeScheme[j];
-				if (interval.contains(boundary[i]))
+				if (interval.contains(border))
 				{
 					float tempMax = interval.max;
-					interval.max = boundary[i];
-					Interval newInterval(boundary[i], tempMax, Interval::Type::LeftOpenRightClosed);
+					interval.max = border;
+					Interval newInterval(border, tempMax, Interval::Type::LeftOpenRightClosed);
 					tentativeScheme.insert(tentativeScheme.begin() + j + 1, newInterval);
 					break;
 				}
@@ -160,17 +149,16 @@ void CAIM(size_t nClasses, const std::vector<Sample>& row)
 			float currCaim = computeCAIM(currQuant);
 			if (currCaim > currMax)
 			{
-				selectedIndex = i;
+				selectedIt = it;
 				currMax = currCaim;
 				currIntervals = tentativeScheme;
 			}
-
 		}
-		if (currMax > globalCAIM || k < nClasses)
+		if (selectedIt != boundary.end() && currMax > globalCAIM || k < nClasses)
 		{
 			scheme = currIntervals;
-			usedIndex.insert(selectedIndex);
 			globalCAIM = currMax;
+			boundary.erase(selectedIt);
 		}
 		else break;
 		k++;
@@ -196,8 +184,6 @@ void CAIM(size_t nClasses, const std::vector<Sample>& row)
 int main()
 {
 	size_t nClasses = 3; // 0: Setosa, 1: Versicolor, 2: Virginica
-
-	
 	std::vector<float> sepal_lengths = {
 		5.1, 4.9, 4.7, 4.6, 5.0, 5.4, 4.6, 5.0, 4.4, 4.9, 5.4, 4.8, 4.8, 4.3, 5.8, 5.7, 5.4, 5.1, 5.7, 5.1, 5.4, 5.1, 4.6, 5.1, 4.8, 5.0, 5.0, 5.2, 5.2, 4.7, 4.8, 5.4, 5.2, 5.5, 4.9, 5.0, 5.5, 4.9, 4.4, 5.1, 5.0, 4.5, 4.4, 5.0, 5.1, 4.8, 5.1, 4.6, 5.3, 5.0,
 		7.0, 6.4, 6.9, 5.5, 6.5, 5.7, 6.3, 4.9, 6.6, 5.2, 5.0, 5.9, 6.0, 6.1, 5.6, 6.7, 5.6, 5.8, 6.2, 5.6, 5.9, 6.1, 6.3, 6.1, 6.4, 6.6, 6.8, 6.7, 6.0, 5.7, 5.5, 5.5, 5.8, 6.0, 5.4, 6.0, 6.7, 6.3, 5.6, 5.5, 5.5, 6.1, 5.8, 5.0, 5.6, 5.7, 5.7, 6.2, 5.1, 5.7,
@@ -212,7 +198,6 @@ int main()
 	for (size_t i = 0; i < sepal_lengths.size(); ++i) {
 		row.push_back({ species[i], sepal_lengths[i] });
 	}
-
 	CAIM(nClasses, row);
 	return 0;
 }
