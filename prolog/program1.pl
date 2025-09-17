@@ -16,3 +16,15 @@ libre(a).
 libre(e).
 ocupado(X) :- sobre(Y, X).
 base(X, Y) :- sobre(Y, X).
+
+arista(3, 6).
+arista(6, 7).
+arista(7, 8).
+arista(3, 5).
+arista(3, 4).
+arista(3, 2).
+arista(2, 1).
+arista(9, 6).
+arista(8, 10).
+camino(X, Y) :- arista(X, Y).
+camino(X, Y) :- arista(X, Z), camino(Z, Y).
