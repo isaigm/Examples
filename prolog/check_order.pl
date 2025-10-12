@@ -1,4 +1,4 @@
-use_module(library(clpfd)).
+:- use_module(library(clpfd)).
 
 order([X]).
 order([X, Y | Xs]) :-
