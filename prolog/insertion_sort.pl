@@ -26,4 +26,5 @@ insertion_sort_tr(L, Acc, Res) :-
     maxList(L, E),
     select(E, L, L_),
     Acc_ = [E | Acc],
+    !,
     insertion_sort_tr(L_, Acc_, Res).
