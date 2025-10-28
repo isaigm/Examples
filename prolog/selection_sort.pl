@@ -17,14 +17,14 @@ maxList_tr([X | Xs], Acc, Res) :-
     maxList_tr(Xs, Res_, Res).
 
 
-insertion_sort(L1, Res) :-
-    insertion_sort_tr(L1, [], Res).
+selection_sort(L1, Res) :-
+    selection_sort_tr(L1, [], Res).
 
-insertion_sort_tr([], Acc, Acc).
+selection_sort_tr([], Acc, Acc).
 
-insertion_sort_tr(L, Acc, Res) :-
+selection_sort_tr(L, Acc, Res) :-
     maxList(L, E),
     select(E, L, L_),
     Acc_ = [E | Acc],
     !,
-    insertion_sort_tr(L_, Acc_, Res).
+    selection_sort_tr(L_, Acc_, Res).
