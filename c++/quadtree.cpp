@@ -1,304 +1,286 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <vector>
-#include <map>
-#define SIZE 1000
-#define RADIUS 5
-class particle;
-struct node;
-sf::Color colors[] = {sf::Color::Blue, sf::Color::Red, sf::Color::Green};
-std::string get_uuid()
-{
-    std::string uuid = "";
-    auto gen_random_chars = [](int n) -> std::string
-    {
-        std::string res = "";
-        for (int i = 0; i < n; i++)
-        {
-            char buff[2];
-            int random = rand() % 16;
-            snprintf(buff, sizeof(buff), "%x", random);
-            res += buff;
-        }
-        return res;
-    };
-    uuid += gen_random_chars(8) + "-";
-    uuid += gen_random_chars(4) + "-";
-    uuid += gen_random_chars(4) + "-";
-    uuid += gen_random_chars(4) + "-";
-    uuid += gen_random_chars(12);
-    return uuid;
-}
+#include <cmath>
+#include <memory>
+#include <algorithm>
 
-class particle
-{
+constexpr int WINDOW_WIDTH = 1280;
+constexpr int WINDOW_HEIGHT = 720;
+constexpr float RADIUS = 5.0f;
+constexpr int MAX_PARTICLES_PER_NODE = 8;
+constexpr int MAX_DEPTH = 6;
+constexpr int PARTICLE_COUNT = 1000;
+
+class Particle {
 public:
-    particle()
-    {
-        shape.setRadius(RADIUS);
-        shape.setOrigin({RADIUS, RADIUS});
-        shape.setFillColor(sf::Color::Blue);
-    }
-    particle(float x, float y, float xxspeed, float yyspeed) : particle()
-    {
-        set_pos(x, y);
-        set_uuid();
-        xspeed = xxspeed;
-        yspeed = yyspeed;
-    }
-    void set_pos(float x, float y)
-    {
-        shape.setPosition(x, y);
-    }
-    sf::Vector2f get_pos()
-    {
-        return shape.getPosition();
-    }
-    void update(float dt)
-    {
-        shape.move({dt * xspeed, dt * yspeed});
-    }
-    std::string get_id()
-    {
-        return id;
+    sf::Vector2f pos;
+    sf::Vector2f vel;
+    sf::Color color;
+
+    Particle(float x, float y, float vx, float vy)
+        : pos(x, y), vel(vx, vy), color(sf::Color::Blue) {
     }
 
-    void set_uuid()
-    {
-        id = get_uuid();
+    void update(float dt) {
+        pos += vel * dt;
     }
-    sf::CircleShape get_shape()
-    {
-        return shape;
-    }
-    bool collides(sf::RectangleShape &rect)
-    {
-        return shape.getGlobalBounds().intersects(rect.getGlobalBounds());
-    }
-    bool collides(particle &other)
-    {
-        return shape.getGlobalBounds().intersects(other.get_shape().getGlobalBounds());
-    }
-    void out_of_bounds()
-    {
-        auto pos = get_pos();
-        if (pos.x < RADIUS || pos.x > SIZE - RADIUS)
-        {
-            xspeed *= -1;
+
+    // --- CAMBIO 2: Límites independientes para X e Y ---
+    void resolve_bounds() {
+        // Eje X (Ancho)
+        if (pos.x < RADIUS) {
+            pos.x = RADIUS;
+            vel.x *= -1;
         }
-        if (pos.y < RADIUS || pos.y > SIZE - RADIUS)
-        {
-            yspeed *= -1;
+        else if (pos.x > WINDOW_WIDTH - RADIUS) {
+            pos.x = WINDOW_WIDTH - RADIUS;
+            vel.x *= -1;
+        }
+
+        // Eje Y (Alto)
+        if (pos.y < RADIUS) {
+            pos.y = RADIUS;
+            vel.y *= -1;
+        }
+        else if (pos.y > WINDOW_HEIGHT - RADIUS) {
+            pos.y = WINDOW_HEIGHT - RADIUS;
+            vel.y *= -1;
         }
     }
-    void render(sf::RenderTarget &rt)
-    {
-        rt.draw(shape);
+};
+
+struct Node {
+    sf::FloatRect bounds;
+    std::vector<Particle*> particles;
+    std::unique_ptr<Node> children[4];
+    bool is_leaf = true;
+    int depth;
+
+    Node(sf::FloatRect b, int d) : bounds(b), depth(d) {
+        particles.reserve(MAX_PARTICLES_PER_NODE);
     }
-    void change_direction()
-    {
-        xspeed *= -1;
-        yspeed *= -1;
+};
+
+class Quadtree {
+private:
+    std::unique_ptr<Node> root;
+    sf::FloatRect initial_bounds;
+
+public:
+    Quadtree(float width, float height) {
+        initial_bounds = sf::FloatRect(0, 0, width, height);
+        clear();
+    }
+
+    void clear() {
+        root = std::make_unique<Node>(initial_bounds, 0);
+    }
+
+    void insert(Particle* p) {
+        insert_impl(root.get(), p);
+    }
+
+    void query_and_resolve(Particle* p) {
+        query_impl(root.get(), p);
+    }
+
+    void render_bounds(sf::RenderTarget& rt) {
+        render_impl(root.get(), rt);
     }
 
 private:
-    sf::CircleShape shape;
-    std::string id = "default";
-    float xspeed = 0, yspeed = 0;
-};
-struct node
-{
-    node *topleft = nullptr;
-    node *topright = nullptr;
-    node *bottomleft = nullptr;
-    node *bottomright = nullptr;
-    sf::RectangleShape bounds;
-};
-class quadtree
-{
-public:
-    quadtree()
-    {
-        create(&root, SIZE, SIZE / 2, SIZE / 2, 0, 4);
-    }
-    void render(sf::RenderTarget &rt)
-    {
-        render(root, rt);
-        for (auto &n : leaf_nodes)
-        {
-            for (auto &p : n.second)
-            {
-                p.render(rt);
-            }
-        }
-    }
-    void add_particle(float x, float y, float xspeed, float yspeed)
-    {
-        node *parent = search_for_parent(root, x, y);
-        if (parent != nullptr)
-        {
-            leaf_nodes[parent].push_back(particle(x, y, xspeed, yspeed));
-        }
-    }
-    void update(float dt)
-    {
-        auto search_and_remove = [](std::string uuid, std::vector<particle> &particles)
-        {
-            for (int i = 0; i < particles.size(); i++)
-            {
-                if (particles[i].get_id() == uuid)
-                {
-                    particles.erase(particles.begin() + i);
-                    break;
-                }
-            }
-        };
+    void insert_impl(Node* node, Particle* p) {
+        if (!node->bounds.contains(p->pos)) return;
 
-        for (auto &n : leaf_nodes)
-        {
-            for (int i = 0; i < n.second.size(); i++)
-            {
-                for (int j = 0; j < n.second.size(); j++)
-                {
-                    if (i != j && n.second[i].collides(n.second[j]))
-                    {
-                        n.second[i].change_direction();
-                        n.second[j].change_direction();
-                        n.second[i].update(dt);
-                        n.second[j].update(dt);
-                    }
-                }
+        if (node->is_leaf) {
+            if (node->particles.size() < MAX_PARTICLES_PER_NODE || node->depth >= MAX_DEPTH) {
+                node->particles.push_back(p);
+            }
+            else {
+                split(node);
+                insert_impl(node, p);
             }
         }
-        for (auto &n : leaf_nodes)
-        {
-            std::vector<std::pair<std::string, std::vector<particle> &>> toremove;
-            for (int i = 0; i < n.second.size(); i++)
-            {
-                auto &p = n.second[i];
-                p.update(dt);
-                p.out_of_bounds();
-                node *parent = search_for_parent(root, p.get_pos().x, p.get_pos().y);
-                if (parent != nullptr && parent != n.first)
-                {
-                    std::pair<std::string, std::vector<particle> &> pair{p.get_id(), n.second};
+        else {
+            int index = get_index(node, p->pos);
+            if (index != -1) insert_impl(node->children[index].get(), p);
+        }
+    }
 
-                    leaf_nodes[parent].push_back(p);
-                    toremove.push_back(pair);
-                }
+    void split(Node* node) {
+        node->is_leaf = false;
+        // Al dividir, simplemente cortamos el rectángulo actual a la mitad.
+        // Si el nodo es rectangular, los hijos también lo serán.
+        float w = node->bounds.width / 2.0f;
+        float h = node->bounds.height / 2.0f;
+        float x = node->bounds.left;
+        float y = node->bounds.top;
+
+        node->children[0] = std::make_unique<Node>(sf::FloatRect(x, y, w, h), node->depth + 1);
+        node->children[1] = std::make_unique<Node>(sf::FloatRect(x + w, y, w, h), node->depth + 1);
+        node->children[2] = std::make_unique<Node>(sf::FloatRect(x, y + h, w, h), node->depth + 1);
+        node->children[3] = std::make_unique<Node>(sf::FloatRect(x + w, y + h, w, h), node->depth + 1);
+
+        for (Particle* existing : node->particles) {
+            int index = get_index(node, existing->pos);
+            if (index != -1) insert_impl(node->children[index].get(), existing);
+        }
+        node->particles.clear();
+    }
+
+    int get_index(Node* node, const sf::Vector2f& pos) {
+        float midX = node->bounds.left + node->bounds.width / 2.0f;
+        float midY = node->bounds.top + node->bounds.height / 2.0f;
+        bool top = (pos.y < midY);
+        bool left = (pos.x < midX);
+        if (left) return top ? 0 : 2;
+        else return top ? 1 : 3;
+    }
+
+    void query_impl(Node* node, Particle* p) {
+        if (!node) return;
+
+        for (Particle* other : node->particles) {
+            if (p == other) continue;
+
+            float dx = p->pos.x - other->pos.x;
+            float dy = p->pos.y - other->pos.y;
+            float distSq = dx * dx + dy * dy;
+            float minDist = RADIUS * 2;
+
+            if (distSq < minDist * minDist && distSq > 0.0001f) {
+                resolve_collision(p, other, dx, dy, distSq);
             }
-            for (int i = 0; i < toremove.size(); i++)
-            {
-                search_and_remove(toremove[i].first, toremove[i].second);
+        }
+
+        if (!node->is_leaf) {
+            int index = get_index(node, p->pos);
+            if (index != -1) {
+                query_impl(node->children[index].get(), p);
             }
         }
     }
 
-private:
-    std::map<node *, std::vector<particle>> leaf_nodes;
-    node *root;
-    node *search_for_parent(node *curr_root, float x, float y)
-    {
-        if (curr_root != nullptr)
-        {
-            particle p;
-            p.set_pos(x, y);
-            if (p.collides(curr_root->bounds) && curr_root->topleft == nullptr && curr_root->topright == nullptr && curr_root->bottomleft == nullptr && curr_root->bottomright == nullptr)
-            {
-                return curr_root;
-            }
-            node *n = nullptr;
-            if (curr_root->topleft != nullptr && p.collides(curr_root->topleft->bounds))
-            {
-                n = search_for_parent(curr_root->topleft, x, y);
-                return n;
-            }
-            if (curr_root->topright != nullptr && p.collides(curr_root->topright->bounds))
-            {
-                n = search_for_parent(curr_root->topright, x, y);
-                return n;
-            }
-            if (curr_root->bottomleft != nullptr && p.collides(curr_root->bottomleft->bounds))
-            {
-                n = search_for_parent(curr_root->bottomleft, x, y);
-                return n;
-            }
-            if (curr_root->bottomright != nullptr && p.collides(curr_root->bottomright->bounds))
-            {
-                n = search_for_parent(curr_root->bottomright, x, y);
-                return n;
-            }
-        }
-        return nullptr;
+    void resolve_collision(Particle* p1, Particle* p2, float dx, float dy, float distSq) {
+        float dist = std::sqrt(distSq);
+
+        float overlap = (RADIUS * 2) - dist;
+        float nx = dx / dist;
+        float ny = dy / dist;
+
+        p1->pos.x += nx * overlap * 0.5f;
+        p1->pos.y += ny * overlap * 0.5f;
+        p2->pos.x -= nx * overlap * 0.5f;
+        p2->pos.y -= ny * overlap * 0.5f;
+
+        float tx = -ny;
+        float ty = nx;
+
+        float dpTan1 = p1->vel.x * tx + p1->vel.y * ty;
+        float dpTan2 = p2->vel.x * tx + p2->vel.y * ty;
+
+        float dpNorm1 = p1->vel.x * nx + p1->vel.y * ny;
+        float dpNorm2 = p2->vel.x * nx + p2->vel.y * ny;
+
+        float m1 = 1.0f;
+        float m2 = 1.0f;
+
+        float mom1 = (dpNorm1 * (m1 - m2) + 2.0f * m2 * dpNorm2) / (m1 + m2);
+        float mom2 = (dpNorm2 * (m2 - m1) + 2.0f * m1 * dpNorm1) / (m1 + m2);
+
+        p1->vel.x = tx * dpTan1 + nx * mom1;
+        p1->vel.y = ty * dpTan1 + ny * mom1;
+        p2->vel.x = tx * dpTan2 + nx * mom2;
+        p2->vel.y = ty * dpTan2 + ny * mom2;
+
+        p1->color = sf::Color::Red;
+        p2->color = sf::Color::Red;
     }
-    void render(node *curr_root, sf::RenderTarget &rt)
-    {
-        if (curr_root != nullptr)
-        {
-            rt.draw(curr_root->bounds);
-            render(curr_root->topleft, rt);
-            render(curr_root->topright, rt);
-            render(curr_root->bottomleft, rt);
-            render(curr_root->bottomright, rt);
+
+    void render_impl(Node* node, sf::RenderTarget& rt) {
+        if (!node) return;
+
+        if (!node->is_leaf || !node->particles.empty()) {
+            sf::RectangleShape rect;
+            rect.setPosition(node->bounds.left, node->bounds.top);
+            rect.setSize({ node->bounds.width, node->bounds.height });
+            rect.setFillColor(sf::Color::Transparent);
+            rect.setOutlineColor(sf::Color(50, 50, 50, 100));
+            rect.setOutlineThickness(1.0f);
+            rt.draw(rect);
         }
-    }
-    void create(node **curr_root, float size, float x, float y, int curr_depth, int max_depth)
-    {
-        if (curr_depth <= max_depth)
-        {
-            *curr_root = new node;
-            sf::Vector2f coords{x - size / 2, y - size / 2};
-            (*curr_root)->bounds.setSize({size, size});
-            (*curr_root)->bounds.setPosition(coords);
-            (*curr_root)->bounds.setFillColor(sf::Color::Transparent);
-            (*curr_root)->bounds.setOutlineColor(sf::Color::Black);
-            (*curr_root)->bounds.setOutlineThickness(1.5f);
-            size /= 2;
-            create(&((*curr_root)->topleft), size, x - size / 2, y - size / 2, curr_depth + 1, max_depth);
-            create(&((*curr_root)->topright), size, x + size / 2, y - size / 2, curr_depth + 1, max_depth);
-            create(&((*curr_root)->bottomleft), size, x - size / 2, y + size / 2, curr_depth + 1, max_depth);
-            create(&((*curr_root)->bottomright), size, x + size / 2, y + size / 2, curr_depth + 1, max_depth);
+
+        if (!node->is_leaf) {
+            for (auto& child : node->children) render_impl(child.get(), rt);
         }
     }
 };
-int main()
-{
-    srand(time(nullptr));
-    quadtree qt;
-    sf::RenderWindow window(sf::VideoMode(SIZE, SIZE), "QUADTREE");
+
+int main() {
+    srand(static_cast<unsigned>(time(nullptr)));
+
+    // --- CAMBIO 3: Usar las nuevas dimensiones en la ventana ---
+    sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Rectangular Quadtree");
     window.setFramerateLimit(60);
-    for (int i = 0; i < 1000; i++)
-    {
-        int x = rand() % (SIZE - 2 * RADIUS) + RADIUS;
-        int y = rand() % (SIZE - 2 * RADIUS) + RADIUS;
-        int xspeed = rand() % 50;
-        int yspeed = rand() % 50;
-        if (rand() % 2)
-            xspeed *= -1;
-        if (rand() % 2)
-            yspeed *= -1;
-        qt.add_particle(x, y, xspeed, yspeed);
+
+    std::vector<Particle> particles;
+    particles.reserve(PARTICLE_COUNT);
+
+    for (int i = 0; i < PARTICLE_COUNT; i++) {
+        // --- CAMBIO 4: Generación aleatoria respetando el rectángulo ---
+        float x = rand() % (WINDOW_WIDTH - (int)RADIUS * 2) + RADIUS;
+        float y = rand() % (WINDOW_HEIGHT - (int)RADIUS * 2) + RADIUS;
+
+        float vx = (rand() % 100 - 50) * 2.0f;
+        float vy = (rand() % 100 - 50) * 2.0f;
+        particles.emplace_back(x, y, vx, vy);
     }
+
+    // --- CAMBIO 5: Inicializar Quadtree con dimensiones rectangulares ---
+    Quadtree qt(WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    sf::CircleShape circle(RADIUS);
+    circle.setOrigin(RADIUS, RADIUS);
 
     sf::Clock clock;
-    while (window.isOpen())
-    {
+    bool show_grid = false;
+
+    while (window.isOpen()) {
         sf::Event ev;
-        while (window.pollEvent(ev))
-        {
-            if (ev.type == sf::Event::Closed)
-            {
-                window.close();
-                break;
-            }
+        while (window.pollEvent(ev)) {
+            if (ev.type == sf::Event::Closed) window.close();
+            if (ev.type == sf::Event::KeyPressed && ev.key.code == sf::Keyboard::Space)
+                show_grid = !show_grid;
         }
+
         float dt = clock.restart().asSeconds();
-        std::cout << 1 / dt << "\n";
-        qt.update(dt);
+        if (dt > 0.05f) dt = 0.05f;
+
+        qt.clear();
+        for (auto& p : particles) {
+            p.color = sf::Color::Blue;
+            qt.insert(&p);
+        }
+
+        for (auto& p : particles) {
+            p.update(dt);
+            p.resolve_bounds();
+            qt.query_and_resolve(&p);
+        }
+
         window.clear(sf::Color::White);
-        qt.render(window);
+
+        if (show_grid) qt.render_bounds(window);
+
+        for (const auto& p : particles) {
+            circle.setPosition(p.pos);
+            circle.setFillColor(p.color);
+            window.draw(circle);
+        }
 
         window.display();
     }
+
     return 0;
 }
