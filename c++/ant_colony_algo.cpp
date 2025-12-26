@@ -1,238 +1,303 @@
 #include <iostream>
 #include <vector>
+#include <cmath>
+#include <random>
+#include <limits>
 #include <SFML/Graphics.hpp>
-#include <map>
-#include <sstream>
-#define MAP_WIDTH 10
-#define MAP_HEIGHT 10
-#define DIM 80
-static const float start_pheromones = 0.1f;
-static const float rho = 0.6f;
-bool visited[MAP_HEIGHT][MAP_WIDTH];
-bool map[MAP_HEIGHT][MAP_WIDTH];
-static const int n_ants = 50;
-static const float q = 10;
-static float alpha = 1;
-static float beta = 1;
-struct edge
-{
-    float pheremones = start_pheromones;
-    float h = 1;
-};
-std::map<std::string, edge> all_edges;
 
-std::string get_key(sf::Vector2i origin, sf::Vector2i neighbour)
+constexpr int MAP_WIDTH = 20;
+constexpr int MAP_HEIGHT = 20;
+constexpr int CELL_SIZE = 40;
+constexpr int NUM_ANTS = 50;
+constexpr float ALPHA = 1.0f;
+constexpr float BETA = 2.5f;
+constexpr float EVAPORATION = 0.05f;
+constexpr float Q = 50.0f;
+constexpr float INITIAL_PHEROMONE = 0.1f;
+
+struct Point
 {
-    char buff[256];
-    snprintf(buff, sizeof(buff), "%d,%d,%d,%d", origin.x, origin.y, neighbour.x, neighbour.y);
-    std::string key(buff);
-    if (all_edges.find(key) != all_edges.end())
-        return key;
-    snprintf(buff, sizeof(buff), "%d,%d,%d,%d", neighbour.x, neighbour.y, origin.x, origin.y);
-    return std::string(buff);
+    int x, y;
+    bool operator==(const Point &other) const { return x == other.x && y == other.y; }
+    bool operator!=(const Point &other) const { return !(*this == other); }
+};
+
+inline int getNodeIndex(int x, int y)
+{
+    return y * MAP_WIDTH + x;
 }
-float get_dist(sf::Vector2i start, sf::Vector2i end)
+
+inline float getDistance(Point a, Point b)
 {
-    float dx = float(start.x - end.x);
-    float dy = float(start.y - end.y);
+    float dx = static_cast<float>(a.x - b.x);
+    float dy = static_cast<float>(a.y - b.y);
     return std::sqrt(dx * dx + dy * dy);
 }
-struct ant
+
+class AntColonySimulation
 {
-    float total_dist()
+private:
+    std::vector<bool> obstacles;
+    std::vector<float> pheromones;
+
+    Point startNode{0, 0};
+    Point endNode{MAP_WIDTH - 1, MAP_HEIGHT - 1};
+
+    std::vector<Point> bestPath;
+    float bestPathLength = std::numeric_limits<float>::max();
+
+    std::mt19937 rng;
+
+    sf::VertexArray gridVertices;
+    sf::VertexArray pathVertices;
+
+public:
+    AntColonySimulation() : obstacles(MAP_WIDTH * MAP_HEIGHT, true), rng(std::random_device{}())
     {
-        float dist = 0;
-        for (int i = 0; i < int(path.size() - 1); i++)
+        int totalNodes = MAP_WIDTH * MAP_HEIGHT;
+        pheromones.resize(totalNodes * totalNodes, INITIAL_PHEROMONE);
+
+        // Inicializar obstáculos aleatorios
+        std::uniform_int_distribution<int> distW(0, MAP_WIDTH - 1);
+        std::uniform_int_distribution<int> distH(0, MAP_HEIGHT - 1);
+
+        for (int i = 0; i < (MAP_WIDTH * MAP_HEIGHT) / 4; ++i)
         {
-            dist += get_dist(path[i], path[i + 1]);
+            int x = distW(rng);
+            int y = distH(rng);
+            if ((x == startNode.x && y == startNode.y) || (x == endNode.x && y == endNode.y))
+                continue;
+            obstacles[getNodeIndex(x, y)] = false;
         }
-        return dist;
+
+        initGraphics();
     }
+
+    void setTarget(int x, int y)
+    {
+        if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT)
+        {
+            endNode = {x, y};
+            obstacles[getNodeIndex(x, y)] = true;
+            resetPheromones();
+        }
+    }
+
+    void resetPheromones()
+    {
+        std::fill(pheromones.begin(), pheromones.end(), INITIAL_PHEROMONE);
+        bestPath.clear();
+        bestPathLength = std::numeric_limits<float>::max();
+    }
+
+    void resetObstacles()
+    {
+        std::fill(obstacles.begin(), obstacles.end(), true);
+        std::uniform_int_distribution<int> distW(0, MAP_WIDTH - 1);
+        std::uniform_int_distribution<int> distH(0, MAP_HEIGHT - 1);
+        for (int i = 0; i < (MAP_WIDTH * MAP_HEIGHT) / 4; ++i)
+        {
+            int x = distW(rng);
+            int y = distH(rng);
+            if ((x == startNode.x && y == startNode.y) || (x == endNode.x && y == endNode.y))
+                continue;
+            obstacles[getNodeIndex(x, y)] = false;
+        }
+        resetPheromones();
+        initGraphics();
+    }
+
     void update()
     {
-        float dist = total_dist();
-        for (int i = 0; i < int(path.size() - 1); i++)
+        struct Ant
         {
-            auto key = get_key(path[i], path[i + 1]);
-            all_edges[key].pheremones += q / dist;
-        }
-    }
-    std::vector<sf::Vector2i> path;
-};
-ant best_ant;
+            std::vector<Point> path;
+            std::vector<bool> visited;
+            float totalDist = 0;
+            bool reached = false;
 
-std::vector<sf::Vector2i> get_next_moves(int i, int j)
-{
-    std::vector<sf::Vector2i> next_moves;
-    for (int y = i - 1; y <= i + 1; y++)
-    {
-        for (int x = j - 1; x <= j + 1; x++)
-        {
-            if ((x == j && y == i) || x < 0 || y < 0 || y >= MAP_HEIGHT || x >= MAP_WIDTH || visited[y][x] || !map[y][x])
-                continue;
-            next_moves.push_back({x, y});
-        }
-    }
-    return next_moves;
-}
+            Ant() : visited(MAP_WIDTH * MAP_HEIGHT, false) {}
+        };
 
-void restart_visited()
-{
-    for (int i = 0; i < MAP_HEIGHT; i++)
-    {
-        for (int j = 0; j < MAP_WIDTH; j++)
+        std::vector<Ant> ants(NUM_ANTS);
+
+        for (auto &ant : ants)
         {
-            visited[i][j] = false;
-        }
-    }
-}
-void init()
-{
-    srand(time(nullptr));
-    restart_visited();
-    best_ant.path.erase(best_ant.path.begin(), best_ant.path.end());
-    for (int i = 0; i < MAP_HEIGHT; i++)
-    {
-        for (int j = 0; j < MAP_WIDTH; j++)
-        {
-            auto n = get_next_moves(i, j);
-            for (auto &pos : n)
+            Point current = startNode;
+            ant.path.reserve(MAP_WIDTH * MAP_HEIGHT);
+            ant.path.push_back(current);
+            ant.visited[getNodeIndex(current.x, current.y)] = true;
+
+            int steps = 0;
+            while (current != endNode && steps < MAP_WIDTH * MAP_HEIGHT)
             {
-                auto key = get_key({j, i}, pos);
-                all_edges[key].h = get_dist(pos, {j, i});
-                all_edges[key].pheremones = start_pheromones;
-            }
-        }
-    }
-}
-float get_rand()
-{
-    return float(rand()) / float(RAND_MAX);
-}
+                std::vector<Point> neighbors;
+                std::vector<float> probabilities;
+                float probSum = 0;
 
-void ACO(sf::Vector2i start, sf::Vector2i end, sf::RenderTexture &rt)
-{
-    rt.clear();
-    std::vector<ant> ants;
-
-    for (int i = 0; i < n_ants; i++)
-    {
-        ants.emplace_back();
-        auto curr_node = start;
-
-        while (true)
-        {
-            auto next_moves = get_next_moves(curr_node.y, curr_node.x);
-            ants.back().path.push_back(curr_node);
-            float sum = 0;
-            float prob = -1;
-            float last_prob = 0;
-            if (curr_node.x == end.x && curr_node.y == end.y)
-            {
-                float best_dist = best_ant.total_dist();
-                if (best_dist == 0 || best_dist > ants.back().total_dist())
+                for (int dy = -1; dy <= 1; ++dy)
                 {
-                    std::cout << "best path found\n";
-                    best_ant.path = ants.back().path;
+                    for (int dx = -1; dx <= 1; ++dx)
+                    {
+                        if (dx == 0 && dy == 0)
+                            continue;
+
+                        Point next = {current.x + dx, current.y + dy};
+
+                        if (next.x < 0 || next.x >= MAP_WIDTH || next.y < 0 || next.y >= MAP_HEIGHT)
+                            continue;
+                        int nextIdx = getNodeIndex(next.x, next.y);
+                        if (!obstacles[nextIdx] || ant.visited[nextIdx])
+                            continue;
+
+                        int currIdx = getNodeIndex(current.x, current.y);
+                        int edgeIdx = currIdx * (MAP_WIDTH * MAP_HEIGHT) + nextIdx;
+
+                        float pheromone = std::pow(pheromones[edgeIdx], ALPHA);
+
+                        float distToGoal = getDistance(next, endNode);
+                        float stepDist = getDistance(current, next);
+                        float heuristic = std::pow(1.0f / (distToGoal + 0.1f) * (1.0f / stepDist), BETA);
+
+                        float prob = pheromone * heuristic;
+
+                        neighbors.push_back(next);
+                        probabilities.push_back(prob);
+                        probSum += prob;
+                    }
                 }
-                break;
-            }
-            if (next_moves.size() == 0)
-            {
-                ants.pop_back();
-                break;
-            }
-            for (auto &next_move : next_moves)
-            {
-                auto key = get_key(curr_node, next_move);
-                auto &curr_edge = all_edges[key];
-                sum += std::pow(curr_edge.pheremones, alpha) * std::pow(1.0f / curr_edge.h, beta);
-            }
-            float r = get_rand();
-            int index_of_next_move = rand() % (next_moves.size());
-            for (int i = 0; i < next_moves.size(); i++)
-            {
-                auto next_move = next_moves[i];
-                auto key = get_key(curr_node, next_move);
-                auto curr_edge = all_edges[key];
-                float probability = std::pow(curr_edge.pheremones, alpha) * std::pow(1.0f / curr_edge.h, beta) / sum;
-                if (prob == -1)
-                    prob = probability;
-                else
-                    prob += probability;
-                if (r > last_prob && r <= prob)
-                {
-                    index_of_next_move = i;
+
+                if (neighbors.empty())
                     break;
+
+                std::uniform_real_distribution<float> dist(0.0f, probSum);
+                float r = dist(rng);
+                float cumulative = 0;
+                int selectedIdx = -1;
+
+                for (size_t i = 0; i < probabilities.size(); ++i)
+                {
+                    cumulative += probabilities[i];
+                    if (r <= cumulative)
+                    {
+                        selectedIdx = i;
+                        break;
+                    }
                 }
-                last_prob = probability;
+                if (selectedIdx == -1)
+                    selectedIdx = neighbors.size() - 1;
+
+                current = neighbors[selectedIdx];
+                ant.path.push_back(current);
+                ant.visited[getNodeIndex(current.x, current.y)] = true;
+                ant.totalDist += getDistance(ant.path[ant.path.size() - 2], current);
+
+                if (current == endNode)
+                {
+                    ant.reached = true;
+                }
+                steps++;
             }
-            visited[curr_node.y][curr_node.x] = true;
-            curr_node = next_moves[index_of_next_move];
         }
-        restart_visited();
+
+        for (auto &p : pheromones)
+        {
+            p *= (1.0f - EVAPORATION);
+            if (p < INITIAL_PHEROMONE)
+                p = INITIAL_PHEROMONE;
+        }
+
+        for (const auto &ant : ants)
+        {
+            if (!ant.reached)
+                continue;
+
+            // Actualizar mejor camino global
+            if (ant.totalDist < bestPathLength)
+            {
+                bestPathLength = ant.totalDist;
+                bestPath = ant.path;
+                std::cout << "Nuevo mejor camino: " << bestPathLength << std::endl;
+            }
+
+            float deposit = Q / ant.totalDist;
+            for (size_t i = 0; i < ant.path.size() - 1; ++i)
+            {
+                int u = getNodeIndex(ant.path[i].x, ant.path[i].y);
+                int v = getNodeIndex(ant.path[i + 1].x, ant.path[i + 1].y);
+
+                int idx1 = u * (MAP_WIDTH * MAP_HEIGHT) + v;
+                int idx2 = v * (MAP_WIDTH * MAP_HEIGHT) + u;
+
+                pheromones[idx1] += deposit;
+                pheromones[idx2] += deposit;
+            }
+        }
     }
-    for (auto &e : all_edges)
+
+    void draw(sf::RenderWindow &window)
     {
-        e.second.pheremones = (1 - rho) * e.second.pheremones;
+
+        for (int y = 0; y < MAP_HEIGHT; ++y)
+        {
+            for (int x = 0; x < MAP_WIDTH; ++x)
+            {
+                int idx = (y * MAP_WIDTH + x) * 4;
+                sf::Color color = obstacles[getNodeIndex(x, y)] ? sf::Color(50, 50, 50) : sf::Color::Red;
+                if (x == startNode.x && y == startNode.y)
+                    color = sf::Color::Green;
+                else if (x == endNode.x && y == endNode.y)
+                    color = sf::Color::Blue;
+
+                gridVertices[idx].color = color;
+                gridVertices[idx + 1].color = color;
+                gridVertices[idx + 2].color = color;
+                gridVertices[idx + 3].color = color;
+            }
+        }
+        window.draw(gridVertices);
+
+        if (!bestPath.empty())
+        {
+            pathVertices.clear();
+            pathVertices.setPrimitiveType(sf::LineStrip);
+            for (const auto &p : bestPath)
+            {
+                sf::Vector2f pos(p.x * CELL_SIZE + CELL_SIZE / 2.0f, p.y * CELL_SIZE + CELL_SIZE / 2.0f);
+                pathVertices.append(sf::Vertex(pos, sf::Color::Yellow));
+            }
+            window.draw(pathVertices);
+        }
     }
-    for (auto &a : ants)
+
+private:
+    void initGraphics()
     {
-        a.update();
+        gridVertices.setPrimitiveType(sf::Quads);
+        gridVertices.resize(MAP_WIDTH * MAP_HEIGHT * 4);
+
+        for (int y = 0; y < MAP_HEIGHT; ++y)
+        {
+            for (int x = 0; x < MAP_WIDTH; ++x)
+            {
+                int idx = (y * MAP_WIDTH + x) * 4;
+                float px = x * CELL_SIZE;
+                float py = y * CELL_SIZE;
+
+                gridVertices[idx].position = {px + 1, py + 1};
+                gridVertices[idx + 1].position = {px + CELL_SIZE - 1, py + 1};
+                gridVertices[idx + 2].position = {px + CELL_SIZE - 1, py + CELL_SIZE - 1};
+                gridVertices[idx + 3].position = {px + 1, py + CELL_SIZE - 1};
+            }
+        }
     }
-    best_ant.update();
-    for (int i = 0; i < int(best_ant.path.size() - 1); i++)
-    {
-        auto key = get_key(best_ant.path[i], best_ant.path[i + 1]);
-        std::stringstream ss(key);
-        sf::Vector2i curr, next;
-        char del;
-        ss >> curr.x;
-        ss >> del;
-        ss >> curr.y;
-        ss >> del;
-        ss >> next.x;
-        ss >> del;
-        ss >> next.y;
-        sf::Vector2f p, q;
-        p.x = curr.x * DIM + DIM / 2.0f;
-        p.y = curr.y * DIM + DIM / 2.0f;
-        q.x = next.x * DIM + DIM / 2.0f;
-        q.y = next.y * DIM + DIM / 2.0f;
-        sf::Vertex line[2];
-        line[0].position = p;
-        line[0].color = sf::Color(255, 255, 0);
-        line[1].position = q;
-        line[1].color = line[0].color;
-        rt.draw(line, 2, sf::LineStrip);
-    }
-    rt.display();
-}
+};
+
 int main()
 {
-    sf::RenderTexture rt;
-    rt.create(800, 800);
-
-    for (int i = 0; i < MAP_HEIGHT; i++)
-    {
-        for (int j = 0; j < MAP_WIDTH; j++)
-        {
-            map[i][j] = true;
-        }
-    }
-    for (int i = 0; i < 20; i++)
-    {
-        int rx = rand() % MAP_WIDTH;
-        int ry = rand() % MAP_HEIGHT;
-        map[ry][rx] = false;
-    }
-    sf::Sprite sprite;
-    sprite.setTexture(rt.getTexture());
-    sf::RenderWindow window(sf::VideoMode(800, 800), "");
-    // window.setVerticalSyncEnabled(true);
-    int i = 9;
-    int j = 9;
-    init();
+    sf::RenderWindow window(sf::VideoMode(MAP_WIDTH * CELL_SIZE, MAP_HEIGHT * CELL_SIZE), "Ant Colony Optimization");
+    window.setFramerateLimit(60);
+    AntColonySimulation simulation;
 
     while (window.isOpen())
     {
@@ -240,41 +305,28 @@ int main()
         while (window.pollEvent(ev))
         {
             if (ev.type == sf::Event::Closed)
-            {
                 window.close();
-                break;
-            }
-            else if (ev.type == sf::Event::MouseButtonPressed && ev.mouseButton.button == sf::Mouse::Left)
+
+            if (ev.type == sf::Event::MouseButtonPressed)
             {
-                auto mouse_pos = sf::Mouse::getPosition(window);
-                i = mouse_pos.y / DIM;
-                j = mouse_pos.x / DIM;
-                init();
+                if (ev.mouseButton.button == sf::Mouse::Left)
+                {
+                    auto pos = sf::Mouse::getPosition(window);
+                    int x = pos.x / CELL_SIZE;
+                    int y = pos.y / CELL_SIZE;
+                    simulation.setTarget(x, y);
+                }
+                else if (ev.mouseButton.button == sf::Mouse::Right)
+                {
+                    simulation.resetObstacles();
+                }
             }
         }
 
-        ACO({0, 0}, {j, i}, rt);
+        simulation.update();
 
         window.clear(sf::Color::Black);
-        window.draw(sprite);
-        for (int i = 0; i < MAP_HEIGHT; i++)
-        {
-            for (int j = 0; j < MAP_WIDTH; j++)
-            {
-                sf::RectangleShape rect;
-                rect.setSize({DIM, DIM});
-                sf::Vector2f pos{float(j * DIM), float(i * DIM)};
-                rect.setFillColor(sf::Color::Transparent);
-                rect.setOutlineThickness(0.7f);
-                rect.setPosition(pos);
-
-                if (!map[i][j])
-                {
-                    rect.setFillColor(sf::Color::Red);
-                }
-                window.draw(rect);
-            }
-        }
+        simulation.draw(window);
         window.display();
     }
     return 0;
