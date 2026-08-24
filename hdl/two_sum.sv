@@ -12,22 +12,22 @@ module two_sum #(
     output logic [W - 1: 0] first,
     output logic [W - 1: 0] second
 );
-    typedef enum int {IDLE, ITER, WAIT} status_t;
+    typedef enum int {IDLE, ITER} status_t;
     logic [N - 1: 0]           valid_keys = '0;
     logic [N - 1: 0][W - 1: 0] keys  = '0;
-    logic [W - 1: 0]           key   = '0;
+    logic [W - 1: 0]           key;
     logic [$clog2(N): 0] curr_idx    = '0;
     logic [$clog2(N): 0] keys_idx    = '0;
     logic [$clog2(N): 0] idx;
     logic found;
     status_t curr_status = IDLE;
+    assign key = (curr_idx < N) ? (target - nums[curr_idx]) : '0;
     always @(posedge clk) begin
         if (rst) begin
             done        <= '0;
             valid_keys  <= '0;
             curr_idx    <= '0;
             curr_status <= IDLE;
-            key         <= '0;
             keys        <= '0;
             first       <= '0;
             second      <= '0;
@@ -41,7 +41,6 @@ module two_sum #(
                         valid_keys  <= '0;
                         curr_idx    <= '0;
                         curr_status <= ITER;
-                        key         <= '0;
                         keys        <= '0;
                         first       <= '0;
                         second      <= '0;
@@ -50,28 +49,24 @@ module two_sum #(
                     end
                 end
                 ITER: begin
-                    key <= target - nums[curr_idx];
-                    curr_idx <= curr_idx + 1;
-                    curr_status <= WAIT;
-                end 
-                WAIT: begin
                     if (found) begin
                         curr_status <= IDLE;
                         first  <= key;
                         second <= target - key;
                         valid  <= '1;
                         done   <= '1;
-                    end else if (curr_idx == N) begin
+                    end else if (curr_idx == (N - 1)) begin
                         curr_status <= IDLE;
                         done        <= '1;
                     end else begin
-                        keys[keys_idx]       <= nums[curr_idx - 1];
+                        keys[keys_idx]       <= nums[curr_idx];
                         valid_keys[keys_idx] <= '1;
                         keys_idx             <= keys_idx + 1;
+                        curr_idx             <= curr_idx + 1;
                         curr_status          <= ITER;
                     end
-                    
-                end
+                end 
+                
                 default: curr_status <= IDLE;
             endcase
         end 
