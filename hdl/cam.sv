@@ -13,7 +13,7 @@ module cam #(
     always_comb begin
         match = '0;
         for (int i = 0; i < N; i++) begin
-            match[i] = keys[i] == key & valid_keys[i];
+            match[i] = (keys[i] == key) & valid_keys[i];
         end
     end
     priority_encoder #(
