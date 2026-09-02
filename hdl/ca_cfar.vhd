@@ -64,7 +64,7 @@ begin
       if rst = '1' then
         curr_idx <= 0;
         sum_all <= (others => '0');
-        
+        window  <= (others => (others => '0'));
       elsif s_valid = '1' then 
         window <= window(1 to TOTAL_SAMPLES - 1) & s_data;
         sum_all <= sum_all
