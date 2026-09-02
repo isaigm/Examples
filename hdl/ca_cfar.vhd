@@ -43,16 +43,13 @@ begin
   
   threshold <= resize(ref_sum * to_unsigned(ALPHA_FP, T_W), T_W);
   
-  m_detect <= '1' when (shift_left(resize(unsigned(window(CUT_IDX)), T_W), 12) > threshold) else '0';
+  m_detect <= '1' when full = '1' and (shift_left(resize(unsigned(window(CUT_IDX)), T_W), 12) > threshold) else '0';
 
   process(sum_all, window)
     variable sum: unsigned(SUM_W - 1 downto 0);
   begin
     sum := sum_all;
-    for j in CUT_IDX to CUT_IDX + N_GUARD  loop
-      sum := sum - resize(unsigned(window(j)), SUM_W);
-    end loop;
-    for j in N_REF / 2 to CUT_IDX - 1 loop
+    for j in N_REF / 2 to CUT_IDX + N_GUARD loop
       sum := sum - resize(unsigned(window(j)), SUM_W);
     end loop;
     ref_sum <= sum;
@@ -64,7 +61,7 @@ begin
       if rst = '1' then
         curr_idx <= 0;
         sum_all <= (others => '0');
-        window  <= (others => (others => '0'));
+        
       elsif s_valid = '1' then 
         window <= window(1 to TOTAL_SAMPLES - 1) & s_data;
         sum_all <= sum_all
