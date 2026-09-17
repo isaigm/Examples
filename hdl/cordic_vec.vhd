@@ -6,8 +6,10 @@ entity cordic_vec is
   port (
         clk:        in  std_logic;
         rst:        in  std_logic;
+        s_valid:    in  std_logic;
         in_x:       in  signed(19 downto 0);
         in_y:       in  signed(19 downto 0);
+        m_valid:    out std_logic;
         out_mag:    out signed(19 downto 0);
         out_angle:  out signed(19 downto 0)
     );
@@ -26,7 +28,10 @@ architecture Behavioral of cordic_vec is
     signal x_st: arr_t  := (others => (others => '0'));
     signal y_st: arr_t  := (others => (others => '0'));
     signal z_st: arr_t  := (others => (others => '0'));
+    signal valid: std_logic_vector(16 downto 0) := (others => '0');
 begin
+    valid(0)  <= s_valid;
+    m_valid   <= valid(16);
     out_mag   <= x_st(16);
     out_angle <= z_st(16);
     process(all)
@@ -53,19 +58,19 @@ begin
             
             if rising_edge(clk) then
                 if rst = '1' then
-                    x_st(i + 1) <= (others => '0');
-                    y_st(i + 1) <= (others => '0');
-                    z_st(i + 1) <= (others => '0');
+                    x_st(i + 1)  <= (others => '0');
+                    y_st(i + 1)  <= (others => '0');
+                    z_st(i + 1)  <= (others => '0');
+                    valid(i + 1) <= '0';
                 else
+                    valid(i + 1) <= valid(i);
                     alpha := angles(i);
                     if y_st(i)(19) = '1' then
                         z_st(i + 1) <= z_st(i) - alpha;
-                        
                         x_st(i + 1) <= x_st(i) - shift_right(y_st(i), i);
                         y_st(i + 1) <= y_st(i) + shift_right(x_st(i), i);  
                     else 
                         z_st(i + 1) <= z_st(i) + alpha;
-                        
                         x_st(i + 1) <= x_st(i) + shift_right(y_st(i), i);
                         y_st(i + 1) <= y_st(i) - shift_right(x_st(i), i);  
                     end if; 
