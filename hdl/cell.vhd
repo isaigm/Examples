@@ -24,7 +24,7 @@ entity cell is
 end cell;
 
 architecture Behavioral of cell is
-    type status_t is (INIT, GET_FIT, GET_BEST, CROSSOVER, MUTATE, EVAL_CHILD);
+    type status_t is (INIT, GET_FIT, CROSSOVER, MUTATE, EVAL_CHILD);
     signal curr_status: status_t := INIT;
     signal chrom: std_logic_vector(7 downto 0) := (others => '0');
     signal lsfr_q: std_logic_vector(7 downto 0);
@@ -61,8 +61,7 @@ begin
                     when GET_FIT =>
                         fit_out     <= parent_fit;
                         curr_status <= CROSSOVER;
-                    when GET_BEST =>
-                        curr_status <= CROSSOVER;
+             
                     when CROSSOVER =>
                         curr_status <= MUTATE;
                         child_chrom <= cross_chrom;
@@ -76,7 +75,7 @@ begin
                             fit_out <= child_fit;
                             chrom   <= child_chrom;
                         end if;
-                        curr_status <= GET_BEST;
+                        curr_status <= CROSSOVER;
                     when others =>
     
                 end case;
