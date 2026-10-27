@@ -11,15 +11,17 @@ entity rc4 is
   port (
     clk            : in  std_logic;
     rst            : in  std_logic;
+    start          : in  std_logic;
     msg            : in  array_t(0 to MSG_LEN - 1)(7 downto 0);
     key            : in  array_t(0 to KEY_LEN - 1)(7 downto 0);
+    done           : out std_logic;
     encrypted_data : out array_t(0 to MSG_LEN - 1)(7 downto 0)
   );
 end entity;
 
 architecture Behavioral of rc4 is
-  type status_t is (INIT, KSA_S1, KSA_S2, KSA_S3, PRGA_S1, PRGA_S2, PRGA_S3, WAIT_SWAP, FINISH);
-  signal curr_status : status_t               := INIT;
+  type status_t is (IDLE, INIT, KSA_S1, KSA_S2, KSA_S3, PRGA_S1, PRGA_S2, PRGA_S3, WAIT_SWAP);
+  signal curr_status : status_t               := IDLE;
   signal S           : array_t(0 to 255)(7 downto 0);
   signal s_idx       : unsigned(7 downto 0) := (others => '0');
   signal key_idx     : integer range 0 to KEY_LEN := 0; 
@@ -40,13 +42,23 @@ begin
                 msg_idx     <= 0;
                 key_idx     <= 0;
                 s_idx       <= (others => '0');
-                curr_status <= INIT;
+                curr_status <= IDLE;
                 temp_j_idx  <= (others => '0');
-                encr_data  <= (others => (others => '0'));
+                encr_data   <= (others => (others => '0'));
+                done        <= '0';
             else
-                
+                done <= '0';
                 case (curr_status) is
-                    
+                    when IDLE =>
+                        if start = '1' then
+                            curr_status <= INIT;
+                            msg_idx     <= 0;
+                            key_idx     <= 0;
+                            s_idx       <= (others => '0');
+                            temp_j_idx  <= (others => '0');
+                            encr_data   <= (others => (others => '0'));
+                        end if;
+
                     when INIT =>
                         S(to_integer(s_idx)) <= std_logic_vector(s_idx);
                         if s_idx = 255 then
@@ -99,12 +111,13 @@ begin
                         t := unsigned(S(to_integer(s_idx))) + unsigned(S(to_integer(temp_j_idx)));
                         encr_data(msg_idx) <= msg(msg_idx) xor s(to_integer(t));
                         if msg_idx = MSG_LEN - 1 then
-                            curr_status <= FINISH;
+                            curr_status <= IDLE;
+                            done <= '1';
                         else
                             curr_status <= PRGA_S1;
                             msg_idx <= msg_idx + 1;
                         end if;
-                    when FINISH => null;
+            
                     when others =>
 
                 end case;
