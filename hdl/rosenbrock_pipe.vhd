@@ -9,7 +9,7 @@ entity rosenbrock_pipe is
     rst: in std_logic;
     LED: out std_logic_vector(15 downto 0)
   );
-end rosenbrock;
+end rosenbrock_pipe;
 
 architecture Behavioral of rosenbrock_pipe is
     constant A:   integer := 1;
